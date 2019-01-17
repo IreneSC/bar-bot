@@ -26,15 +26,19 @@ cmd = CommandStruct();
 % Starts logging in the background
 group.startLog( 'dir', 'logs' );  
 
-% Parameters for sin/cos function
-freqHz = 1;           % [Hz]
-freq = freqHz * 2*pi;   % [rad / sec]
-amp = deg2rad( 45 );    % [rad]
-
 original_position = group.getNextFeedback().position;
-start_angle = deg2rad(90);
+target_position = original_position + deg2rad( 5 );
 
-duration = 10; % [sec]
+gains = GainStruct();
+
+% positionKps = [50 100];
+% velocityKps = [50 100];
+
+gains.positionKp = 50;
+gains.velocityKp = 50;
+group.send('gains', gains);
+
+duration = 3; % [sec]
 timer = tic();
 while toc(timer) < duration
     
@@ -43,11 +47,11 @@ while toc(timer) < duration
     fbk = group.getNextFeedback();  
 
     % Update position set point
-    cmd.position = (original_position - amp) + amp * sin( freq * toc(timer) + start_angle);   
+    cmd.position = target_position; 
     group.send(cmd); 
     
 end
 
 % Stop logging and plot the position data using helper functions
 log = group.stopLog();
-HebiUtils.plotLogs( log, 'position' );
+HebiUtils.plotLogs( log , 'position' );
