@@ -51,3 +51,4 @@ end
 % Stop logging and plot the position data using helper functions
 log = group.stopLog();
 HebiUtils.plotLogs( log, 'position' );
+HebiUtils.plotLogs( log, 'velocity' );
