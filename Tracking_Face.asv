@@ -1,0 +1,54 @@
+% lab2 part3
+
+%% Setup
+
+% Create the face detector object.
+faceDetector = vision.CascadeObjectDetector();
+
+% Create the point tracker object.
+pointTracker = vision.PointTracker('MaxBidirectionalError', 2);
+
+% Create the webcam object.
+cam = webcam('HD Pro Webcam C920');
+
+% Capture one frame to get its size.
+videoFrame = snapshot(cam);
+frameSize = size(videoFrame);
+
+% Create the video player object.
+videoPlayer = vision.VideoPlayer('Position', [100 100 [frameSize(2), frameSize(1)]+30]);
+
+gainsTracking = [1, 0.1, 0.001]; % kP, kD, kI
+%% Loop
+while true
+    sweep
+    centroidx = faceTrack(faceDetector, pointTracker, cam, videoPlayer);
+    frameMin = 0;
+    frameMax = frameSize(2);
+    error = geterrorcam(centroidx, frameMin, frameMax);
+    
+    move motor(error);
+end
+
+
+%% End
+
+% Clean up.
+clear cam;
+release(videoPlayer);
+release(pointTracker);
+release(faceDetector);
+
+% returns the normed error of the position of an object from the center of
+% the camera
+% @param pixel positions of object and max/min of screen edge
+% returns error on [-1,1]
+function [error] = getErrorCam(position, bound1, bound2)
+    center = (bound1 + bound2)/2;
+    width = (bound2 - bound1)/2;
+    error = (position - center)/width;
+end
+
+function PID(error, gains)
+    return error(1) * gains(1) + error(2) * gains(2) + error(3) * gains(3);
+    

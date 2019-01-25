@@ -86,7 +86,7 @@ while runLoop && frameCount <= 1
     runLoop = isOpen(videoPlayer);
 end
 
-centroidx = mean(bboxPoints(:,1));
-centroidy = mean(bboxPoints(:,2));
+centroidx = 
+centroidy = 
 end
 
