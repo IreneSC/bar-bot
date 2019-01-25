@@ -2,6 +2,10 @@
 
 %% Setup
 % For camera
+
+clear *;
+close all;
+
 % Create the face detector object.
 faceDetector = vision.CascadeObjectDetector();
 
@@ -18,12 +22,10 @@ frameSize = size(videoFrame);
 % Create the video player object.
 videoPlayer = vision.VideoPlayer('Position', [100 100 [frameSize(2), frameSize(1)]+30]);
 
-gainsTracking = [1, 0.1, 0.001]; % kP, kD, kI
+gainsTracking = [0.1, 0, 0]; % kP, kI, kD
 errorTracking = zeros(1,3); % error, derivative of error, and integration of error
 
 % For Hebi
-clear *;
-close all;
 HebiLookup.initialize();
 
 familyName = 'Arm';
@@ -34,24 +36,29 @@ group = HebiLookup.newGroupFromNames( familyName, moduleNames );
 % The command struct has fields for position, velocity, and effort.  
 % Fields that are empty [] or NaN will be ignored when sending.
 cmd = CommandStruct(); 
+cmd.position = group.getNextFeedback().position;
 
 %% Loop
 while true
-    sweep
-    centroidx = faceTrack(faceDetector, pointTracker, cam, videoPlayer);
-    frameMin = 0;
-    frameMax = frameSize(2);
-    errorP = geterrorcam(centroidx, frameMin, frameMax);
-    
-    % PID shit
-    errorTracking(2) = errorP - errorTracking(1);
-    errorTracking(3) = errorTracking(3) + errorP;
-    errorTracking(1) = errorP;
-    
-    response = PID(errorTracking, grainsTracking);
+    % sweep
+    [centroidx,~,isFaceDetected] = faceTrack(faceDetector, pointTracker, cam, videoPlayer);
+    if isFaceDetected
+        frameMin = 0;
+        frameMax = frameSize(2);
+        errorP = getErrorCam(centroidx, frameMin, frameMax);
 
-    cmd.position = response + cmd.position;
-    group.send(cmd); 
+        % PID shit
+        old_pos =  errorTracking(1);
+        errorTracking(1) = errorP; % P
+        errorTracking(2) = errorTracking(3) + errorP; % I
+        errorTracking(3) = errorP - old_pos; % Ds
+
+        response = PID(errorTracking, gainsTracking);
+
+        cmd.position = -response + cmd.position; 
+        % disp(response);
+    end
+    group.send(cmd);
 end
 
 
