@@ -1,5 +1,6 @@
-function [centroidx, centroidy, isFaceDetected, numPts] = faceTrack(faceDetector, pointTracker, cam, videoPlayer, numPts)
+function [centroidx, centroidy, isFaceDetected, numPts] = faceTrack(faceDetector, pointTracker, cam, videoPlayer, numPtsOG)
 %% Dectection + Tracking
+numPts = numPtsOG;
 isFaceDetected = 0;
 centroidx = 0;
 centroidy = 0;
@@ -80,13 +81,10 @@ end
 % Display the annotated video frame using the video player object.
 step(videoPlayer, videoFrame);
 
-% Check whether the video player window has been closed.
-runLoop = isOpen(videoPlayer);
-
 if isFaceDetected
     centroidx = mean(bboxPoints(:,1));
     centroidy = mean(bboxPoints(:,2));
-    numPts += 1;
+    numPts = numPts + 1;
 else
     numPts = 0;
 end

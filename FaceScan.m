@@ -61,12 +61,12 @@ duration = 120; % [sec]
 overall_timer = tic();
 sinusoid_timer = tic();
 tracking = false;
-int camera_rate = 5;
-int 1i =0;
-int numFaces = 0
+camera_rate = 10;
+index = 0;
+numPts = 0;
 while toc(overall_timer) < duration
-    if (mod(1i, camera_rate) == 0)
-        centroidx, centroidy, isFaceDetected, numPts = faceTrack(faceDetector, pointTracker, cam, videoPlayer);
+    if (mod(index, camera_rate) == 0)
+        [centroidx, centroidy, isFaceDetected, numPts] = faceTrack(faceDetector, pointTracker, cam, videoPlayer, numPts);
     end
     fbk = group.getNextFeedback();
     if(~isFaceDetected && tracking)
