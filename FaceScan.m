@@ -66,7 +66,7 @@ index = 0;
 numPts = 0;
 while toc(overall_timer) < duration
     if (mod(index, camera_rate) == 0)
-        [centroidx, centroidy, isFaceDetected, numPts] = faceTrack(faceDetector, pointTracker, cam, videoPlayer, numPts);
+        [centroidx, centroidy, isFaceDetected, numPts] = faceTrack(faceDetector, pointTracker, cam, videoPlayer, numPts, [], []);
     end
     fbk = group.getNextFeedback();
     if(~isFaceDetected && tracking)

@@ -1,6 +1,9 @@
-function [centroidx, centroidy, isFaceDetected, numPts] = faceTrack(faceDetector, pointTracker, cam, videoPlayer, numPtsOG)
+function [centroidx, centroidy, isFaceDetected, numPts, oldPoints, bboxPoints] ...
+= faceTrack(faceDetector, pointTracker, cam, videoPlayer, numPtsOG, oldPointsOG, bboxPointsOG)
 %% Dectection + Tracking
 numPts = numPtsOG;
+oldPoints = oldPointsOG;
+bboxPoints = bboxPointsOG;
 isFaceDetected = 0;
 centroidx = 0;
 centroidy = 0;
