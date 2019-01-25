@@ -58,7 +58,7 @@ while toc(overall_timer) < duration
         wait_timer = tic();
         fprintf('collision detected. Target Position before: %f, ', cmd.position);
         % Wait until the sinusoid is headed the other direction
-        while toc(wait_timer) < (1 / (2 * freqHz)) % the period
+        while toc(wait_timer) < (1 / (2 * freqHz)) % 1/2 the period
            % do nothing 
             cmd.position = fbk.position;
             group.send(cmd);

@@ -55,7 +55,7 @@ while true
 
         response = PID(errorTracking, gainsTracking);
 
-        cmd.position = -response + cmd.position; 
+        cmd.position = -getErrorCam(centroidx, frameMin, frameMax) + cmd.position; 
         % disp(response);
     end
     group.send(cmd);
