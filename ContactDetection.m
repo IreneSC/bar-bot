@@ -45,6 +45,7 @@ group.send('gains', gains);
 
 duration = 120; % [sec]
 overall_timer = tic();
+sin_timer = tic();
 while toc(overall_timer) < duration
     % Even though we don't use the feedback, getting feedback conveniently 
     % limits the loop rate to the feedback frequency
@@ -53,24 +54,37 @@ while toc(overall_timer) < duration
     %fprintf("curr: %f, target: %f", curr_position, target_position);
 
     % Update position set point
-    if (abs(fbk.effort - getGravityTorque(fbk.position)) > 2)
+    if (abs(fbk.effort - getGravityTorque(fbk.position)) > 1.5 && toc(sin_timer) > 0.5)
         wait_timer = tic();
+        sin_angle = freq * toc(sin_timer) + start_angle; % current angle of where we are in the sin function
         % figure out how long to wait in order to change directions
-        diff_angle = mod(fbk.position, pi);
-        target_angle = fbk.position - 2 * (diff_angle - pi / 2);
-        target_time = (target_angle / (2 * pi)) * freqHz;
-        fprintf('collision detected. Target Position before: %f, ', cmd.position);
+        diff_angle = mod(sin_angle, pi);
+        if (diff_angle < pi / 2)
+            target_angle = sin_angle + 2 * ((pi / 2) - diff_angle);
+        else
+            %target_angle = 2 * pi - 2 * (diff_angle - (pi / 2));
+            target_angle = sin_angle - 2 * (diff_angle - (pi / 2));
+        end
+        fprintf('curr_speed: %f, ', amp * cos( freq * toc(sin_timer) + start_angle));
+        %target_time = (target_angle / (2 * pi)) * (1 / freqHz);
+        start_angle = target_angle;
+        fprintf('diff_angle: %f, target pos before: %f, ',diff_angle, cmd.position);
         % Wait until the sinusoid is headed the other direction
         % And then wait one more full period, to ensure a decent wait time
-        while toc(wait_timer) < (target_time + 2 * pi * freqHz) % 1/2 the period
+        while toc(wait_timer) < 1 % wait 1 second
            % do nothing 
             cmd.position = fbk.position;
+            cmd.effort = getGravityTorque(fbk.position);
             group.send(cmd);
             group.getNextFeedback();
         end
-        fprintf('target after: %f\n',original_position - amp + amp * sin( freq * toc(overall_timer) + start_angle));
+        cmd.effort = [];
+        
+        sin_timer = tic();
+        fprintf('new_speed: %f, ', amp * cos( freq * toc(sin_timer) + start_angle));
+        fprintf('target after: %f\n', original_position - amp + amp * sin( freq * toc(sin_timer) + start_angle));
     end
-    target_pos = original_position - amp + amp * sin( freq * toc(overall_timer) + start_angle);   
+    target_pos = original_position - amp + amp * sin( freq * toc(sin_timer) + start_angle);   
     cmd.position = target_pos;
     %gains.effortFF = getGravityTorque(target_pos);
     %group.send('gains', gains);
