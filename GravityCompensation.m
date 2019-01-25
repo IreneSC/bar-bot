@@ -22,10 +22,36 @@ group = HebiLookup.newGroupFromNames( familyName, moduleNames );
 % The command struct has fields for position, velocity, and effort.  
 % Fields that are empty [] or NaN will be ignored when sending.
 
-target_pos = deg2rad(45);
+target_pos = deg2rad(90);
+gains = GainStruct();
 
-goToPosition(target_pos, group);
+gains.positionKp = 0;
+gains.positionKi = 0;
+gains.positionKd = 0;
+gains.positionFF = 0;
+gains.velocityKp = 0;
+gains.velocityKi = 0;
+gains.velocityKd = 0;
+gains.velocityFF = 0;
+%gains.effortKp = 5;
+group.send('gains', gains);
+
+cmd = CommandStruct(); 
+
+
+while 1==1
+    fbk = group.getNextFeedback();
+    cmd.effort = getGravityTorque(fbk.position);
+    %cmd.position = fbk.position;
+    group.send(cmd);
+    
+    %gains.effortFF = getGravityTorque(fbk.position);
+    %group.send('gains', gains);
+end
+
+%goToPosition(target_pos, group);
 holdPosition(target_pos, group);
+
 
 % FUNCTIONS
 function effort_g = getGravityTorque(position)
@@ -85,7 +111,7 @@ function holdPosition(target_position, group)
     gains.velocityFF = 0;
     group.send('gains', gains);
 
-    duration = 3; % [sec]
+    duration = 15; % [sec]
     timer = tic();
     while toc(timer) < duration
         % Even though we don't use the feedback, getting feedback conveniently 

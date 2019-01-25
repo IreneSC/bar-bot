@@ -14,7 +14,7 @@ clear *;
 close all;
 
 % Create the face detector object.
-faceDetector = vision.CascadeObjectDetector('armDetector.xml');
+faceDetector = vision.CascadeObjectDetector();
 
 % Create the point tracker object.
 histogramTracker = vision.HistogramBasedTracker();

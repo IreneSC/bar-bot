@@ -40,6 +40,7 @@ gains = GainStruct();
 % velocityKps = [50 100];
 
 gains.positionKp = 4;
+gains.positionKi = 0.05;
 gains.velocityKp = 0;
 group.send('gains', gains);
 
