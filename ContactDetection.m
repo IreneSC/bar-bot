@@ -53,12 +53,16 @@ while toc(overall_timer) < duration
     %fprintf("curr: %f, target: %f", curr_position, target_position);
 
     % Update position set point
-    % TODO: tune
     if (abs(fbk.effort - getGravityTorque(fbk.position)) > 2)
         wait_timer = tic();
+        % figure out how long to wait in order to change directions
+        diff_angle = mod(fbk.position, pi);
+        target_angle = fbk.position - 2 * (diff_angle - pi / 2);
+        target_time = (target_angle / (2 * pi)) * freqHz;
         fprintf('collision detected. Target Position before: %f, ', cmd.position);
         % Wait until the sinusoid is headed the other direction
-        while toc(wait_timer) < (1 / (2 * freqHz)) % 1/2 the period
+        % And then wait one more full period, to ensure a decent wait time
+        while toc(wait_timer) < (target_time + 2 * pi * freqHz) % 1/2 the period
            % do nothing 
             cmd.position = fbk.position;
             group.send(cmd);

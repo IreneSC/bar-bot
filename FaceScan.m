@@ -41,7 +41,7 @@ group = HebiLookup.newGroupFromNames( familyName, moduleNames );
 cmd = CommandStruct(); 
 
 % Parameters for sin/cos function
-freqHz = 0.25;           % [Hz]
+freqHz = 0.12;           % [Hz]
 freq = freqHz * 2*pi;   % [rad / sec]
 amp = deg2rad( 90 );    % [rad]
 
@@ -53,8 +53,9 @@ group.startLog( 'dir', 'logs' );
 
 gains = GainStruct();
 
-gains.positionKp = 4;
+gains.positionKp = 1.5;
 gains.velocityKp = 0;
+gains.positionTargetLowpassGain = 0.1;
 group.send('gains', gains);
 
 duration = 120; % [sec]
@@ -64,15 +65,17 @@ tracking = false;
 camera_rate = 10;
 index = 0;
 numPts = 0;
+oldPoints = 0;
+bboxPoints = 0;
 while toc(overall_timer) < duration
     if (mod(index, camera_rate) == 0)
-        [centroidx, centroidy, isFaceDetected, numPts] = faceTrack(faceDetector, pointTracker, cam, videoPlayer, numPts, [], []);
+        [centroidx, centroidy, isFaceFirstDetected, isFaceDetected, numPts, oldPoints, bboxPoints] = faceTrack(faceDetector, pointTracker, cam, videoPlayer, numPts,oldPoints, bboxPoints);
     end
     fbk = group.getNextFeedback();
-    if(~isFaceDetected && tracking)
+    if(~isFaceDetected && tracking && ~isFaceFirstDetected)
         %restart scan from this position
         tracking = false;
-        original_position = group.getNextFeedback().position;
+        original_position = fbk.position;
         sinusoid_timer = tic();
         cmd.position = original_position;
         group.send(cmd);
@@ -83,8 +86,9 @@ while toc(overall_timer) < duration
     else
         frameMin = 0;
         frameMax = frameSize(2);
-        cmd.position = -deg2rad(78.0/2)*getErrorCam(centroidx, frameMin, frameMax) + group.getNextFeedback().position;
+        cmd.position = -deg2rad(78.0/2)*getErrorCam(centroidx, frameMin, frameMax) + fbk.position;
         tracking = true;
+        group.send(cmd);
     end
     
 end
@@ -94,3 +98,12 @@ log = group.stopLog();
 HebiUtils.plotLogs( log , 'position' );
 
 % FUNCTIONS
+% returns the normed error of the position of an object from the center of
+% the camera
+% @param pixel positions of object and max/min of screen edge
+% returns error on [-1,1]
+function [error] = getErrorCam(position, bound1, bound2)
+    center = (bound1 + bound2)/2;
+    width = (bound2 - bound1)/2;
+    error = (position - center)/width;
+end

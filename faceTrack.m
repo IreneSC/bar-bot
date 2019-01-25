@@ -1,22 +1,25 @@
-function [centroidx, centroidy, isFaceDetected, numPts, oldPoints, bboxPoints] ...
+function [centroidx, centroidy, isFaceFirstDetected, isFaceDetected, numPts, oldPoints, bboxPoints] ...
 = faceTrack(faceDetector, pointTracker, cam, videoPlayer, numPtsOG, oldPointsOG, bboxPointsOG)
 %% Dectection + Tracking
 numPts = numPtsOG;
 oldPoints = oldPointsOG;
 bboxPoints = bboxPointsOG;
+isFaceFirstDetected = 0;
 isFaceDetected = 0;
 centroidx = 0;
 centroidy = 0;
+
+min_points_for_face = 50;
 
 % Get the next frame.
 videoFrame = snapshot(cam);
 videoFrameGray = rgb2gray(videoFrame);
 
-if numPts < 30
+if numPts < min_points_for_face
     % Detection mode.
     bbox = faceDetector.step(videoFrameGray);
     if ~isempty(bbox)
-        isFaceDetected = 1;
+        isFaceFirstDetected = 1;
         % Find corner points inside the detected region.
         points = detectMinEigenFeatures(videoFrameGray, 'ROI', bbox(1, :));
 
@@ -49,13 +52,14 @@ if numPts < 30
 else
     % Tracking mode.
     [xyPoints, isFound] = step(pointTracker, videoFrameGray);
-    isFaceDetected = isFound;
     visiblePoints = xyPoints(isFound, :);
     oldInliers = oldPoints(isFound, :);
 
     numPts = size(visiblePoints, 1);
 
-    if numPts >= 30
+    if numPts >= min_points_for_face
+        isFaceDetected = 1;
+        fprintf("found face with %d points\n", numPts);
         % Estimate the geometric transformation between the old points
         % and the new points.
         [xform, oldInliers, visiblePoints] = estimateGeometricTransform(...
@@ -87,9 +91,7 @@ step(videoPlayer, videoFrame);
 if isFaceDetected
     centroidx = mean(bboxPoints(:,1));
     centroidy = mean(bboxPoints(:,2));
-    numPts = numPts + 1;
-else
-    numPts = 0;
+    fprintf("cx: %f, cy: %f\n", centroidx, centroidy);
 end
 
 end
