@@ -29,36 +29,36 @@ frameSize = size(videoFrame);
 % Create the video player object.
 videoPlayer = vision.VideoPlayer('Position', [100 100 [frameSize(2), frameSize(1)]+30]);
 
-HebiLookup.initialize();
-
-familyName = 'Arm';
-moduleNames = 'tapedispenser';  
-group = HebiLookup.newGroupFromNames( familyName, moduleNames );
+% HebiLookup.initialize();
+% 
+% familyName = 'Arm';
+% moduleNames = 'tapedispenser';  
+% group = HebiLookup.newGroupFromNames( familyName, moduleNames );
 
 %% Open-Loop Controller (Position)
 % The command struct has fields for position, velocity, and effort.  
 % Fields that are empty [] or NaN will be ignored when sending.
-cmd = CommandStruct(); 
+% cmd = CommandStruct(); 
 
 % Parameters for sin/cos function
 freqHz = 0.12;           % [Hz]
 freq = freqHz * 2*pi;   % [rad / sec]
 amp = deg2rad( 90 );    % [rad]
 
-original_position = group.getNextFeedback().position;
+% original_position = group.getNextFeedback().position;
 start_angle = deg2rad(90);
 
 % Starts logging in the background
-group.startLog( 'dir', 'logs' );  
+% group.startLog( 'dir', 'logs' );  
+% 
+% gains = GainStruct();
+% 
+% gains.positionKp = 1.5;
+% gains.velocityKp = 0;
+% gains.positionTargetLowpassGain = 0.1;
+% group.send('gains', gains);
 
-gains = GainStruct();
-
-gains.positionKp = 1.5;
-gains.velocityKp = 0;
-gains.positionTargetLowpassGain = 0.1;
-group.send('gains', gains);
-
-duration = 120; % [sec]
+duration = 100000; % [sec]
 overall_timer = tic();
 sinusoid_timer = tic();
 tracking = false;
@@ -67,35 +67,50 @@ index = 0;
 numPts = 0;
 oldPoints = 0;
 bboxPoints = 0;
+PUB_valid = rospublisher("valid", "std_msgs/Bool");
+PUB_goal = rospublisher("goal", "std_msgs/Float64");
+isValid = 0;
 while toc(overall_timer) < duration
     if (mod(index, camera_rate) == 0)
         [centroidx, centroidy, isFaceFirstDetected, isFaceDetected, numPts, oldPoints, bboxPoints] = faceTrack(faceDetector, pointTracker, cam, videoPlayer, numPts,oldPoints, bboxPoints);
     end
-    fbk = group.getNextFeedback();
+%     fbk = group.getNextFeedback();
     if(~isFaceDetected && tracking && ~isFaceFirstDetected)
+        isValid = 0;
         %restart scan from this position
         tracking = false;
-        original_position = fbk.position;
-        sinusoid_timer = tic();
-        cmd.position = original_position;
-        group.send(cmd);
+%         original_position = fbk.position;
+%         sinusoid_timer = tic();
+%         cmd.position = original_position;
+%         group.send(cmd);
     elseif(~isFaceDetected)
-        target_pos = original_position - amp + amp * sin( freq * toc(sinusoid_timer) + start_angle);   
-        cmd.position = target_pos;
-        group.send(cmd); 
+        isValid = 0;
+%         target_pos = original_position - amp + amp * sin( freq * toc(sinusoid_timer) + start_angle);   
+%         cmd.position = target_pos;
+%         group.send(cmd); 
     else
-        frameMin = 0;
-        frameMax = frameSize(2);
-        cmd.position = -deg2rad(78.0/2)*getErrorCam(centroidx, frameMin, frameMax) + fbk.position;
+        isValid = 1;
+         frameMin = 0;
+         frameMax = frameSize(2);
+%         cmd.position = -deg2rad(78.0/2)*getErrorCam(centroidx, frameMin, frameMax) + fbk.position;
         tracking = true;
-        group.send(cmd);
+%         group.send(cmd);
     end
-    
+    msg_valid = rosmessage(PUB_valid);
+    msg_goal = rosmessage(PUB_goal);
+    msg_valid.Data = isValid;
+    if isValid
+        msg_goal.Data = -deg2rad(78.0/2)*getErrorCam(centroidx, frameMin, frameMax); % + fbk.position;
+    else
+        msg_goal.Data = 0;
+    end
+    send(PUB_goal,msg_goal);
+    send(PUB_valid, msg_valid);
 end
 
 % Stop logging and plot the position data using helper functions
-log = group.stopLog();
-HebiUtils.plotLogs( log , 'position' );
+% log = group.stopLog();
+% HebiUtils.plotLogs( log , 'position' );
 
 % FUNCTIONS
 % returns the normed error of the position of an object from the center of
