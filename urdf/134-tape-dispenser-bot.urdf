@@ -1,0 +1,84 @@
+<?xml version="1.0"?>
+
+<robot name="134-tape-dispenser-bot">
+
+  <!-- ******************** Materials ******************** -->
+
+  <material name="white">
+    <color rgba="1.0 1.0 1.0 1"/>
+  </material>
+
+  <material name="gray">
+    <color rgba="0.6 0.6 0.6 1"/>
+  </material>
+
+  <material name="red">
+    <color rgba=".82 0.06 0.06 1"/>
+  </material>
+
+  <material name="blue">
+    <color rgba=".06 0.8 0.06 1"/>
+  </material>
+
+
+  <!-- ************************* ROBOT DEFINITION ************************* -->
+
+  <link name="world">
+  </link>
+
+
+  <!-- Base plate -->
+  <joint name="baseplate_attachment"  type="fixed">
+    <origin xyz="0 0 0" rpy="0 0 0" />
+    <parent link="world"/>
+    <child link="baseplate"/>
+  </joint>
+
+  <link name="baseplate">
+    <visual>
+      <origin xyz="0 0 -.0127" rpy="0 0 0" />
+      <geometry>
+        <box size="0.2 0.2 0.0254" />
+      </geometry>
+      <material name="white"/>
+    </visual>
+  </link>
+
+  <!-- Base Motor Body -->
+  <joint name="basemotor_attachment" type="fixed">
+    <parent link="baseplate"/>
+    <child  link="basemotor"/>
+    <origin xyz="0 0 0" rpy="1.57 0 0"/>
+  </joint>
+
+  <link name="basemotor">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://hebiros_description/meshes/x5.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="red"/>
+    </visual>
+  </link>
+  
+
+  <!-- Base Joint -->
+  <joint name="Arm/tapedispenser" type="continuous">
+    <parent link="baseplate"/>
+    <child  link="link1"/>
+    <origin xyz="0 0 0.031" rpy="0 0 0"/>
+    <axis xyz="0 0 1"/>
+  </joint>
+
+  <!-- Link 1 -->
+  <link name="link1">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <box size="0.2 0.02 0.005" />
+      </geometry>
+      <material name="blue"/>
+    </visual>
+  </link>
+
+</robot>

@@ -1,0 +1,21 @@
+<launch>
+  <param name="robot_description" textfile="$(find 134-tape-dispenser-bot)/urdf/134-tape-dispenser-bot.urdf"/>
+  <!-- <param name="robot_description" textfile="$(find 134-tape-dispenser-bot)/urdf/test.urdf"/> -->
+
+  <node name="hebiros_node" pkg="hebiros" type="hebiros_node" respawn="false" output="screen"/>
+
+  <!-- <node name="sn" pkg="simple" type="simple_node" respawn="false" output="screen"/> -->
+
+  <node name="rsp" pkg="robot_state_publisher" type="robot_state_publisher">
+    <!-- <remap from="joint_states" to="/hebiros/all/feedback/joint_state"/> -->
+    <param name="ignore_timestamp" value="true"/>
+  </node>
+
+  <node name="jsp" pkg="joint_state_publisher" type="joint_state_publisher">
+    <!-- <remap from="joint_states" to="/hebiros/all/feedback/joint_state"/> -->
+    <!-- <param name="ignore_timestamp" value="true"/> -->
+    <param name="use_gui" value="true"/>
+  </node>
+
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(find 134-tape-dispenser-bot)/rviz/viewrobot.rviz"/>
+</launch>
