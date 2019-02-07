@@ -53,7 +53,7 @@ Visualization Manager:
       Value: true
     - Class: rviz/Image
       Enabled: true
-      Image Topic: /cam/image_raw
+      Image Topic: /face_det/image
       Max Value: 1
       Median window: 5
       Min Value: 0
@@ -127,4 +127,4 @@ Window Geometry:
     collapsed: false
   Width: 1603
   X: 60
-  Y: 5
+  Y: 0
