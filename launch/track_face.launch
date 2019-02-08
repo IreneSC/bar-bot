@@ -1,0 +1,20 @@
+<launch>
+  <node name="cam" pkg="usb_cam" type="usb_cam_node" output="screen" >
+    <param name="video_device" value="/dev/video0" />
+    <param name="image_width" value="800" />
+    <param name="image_height" value="600" />
+    <param name="pixel_format" value="yuyv" />
+    <param name="camera_frame_id" value="cam" />
+    <param name="io_method" value="mmap"/>
+  </node>
+
+  <node name="rviz" pkg="rviz" type="rviz" output="screen" args="-d $(find bar-bot)/rviz/viewimage.rviz"/>
+
+  <node name="face_det" pkg="opencv_apps" type="face_detection" >
+    <remap from="image" to="/cam/image_raw"/>
+  </node>
+
+  <node name="face_tracker_publisher" pkg="bar-bot" type="face_tracker_node"/>
+  <node name="simple_node" pkg="simple" type="simple_node"/>
+  <node name="hebi_node" pkg="hebiros" type="hebiros_node"/>
+</launch>

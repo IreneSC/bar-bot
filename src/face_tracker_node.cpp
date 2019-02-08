@@ -2,12 +2,11 @@
 #include "std_msgs/Float64.h"
 #include "std_msgs/Bool.h"
 #include "opencv_apps/FaceArrayStamped.h"
-// #include "opencv_apps/Face.h"
 #include "opencv_apps/Rect.h"
 #include <cmath>
 
 const std::string face_detector_group = "/face_det";
-const double cam_width = 720; // Pixels
+const double cam_width = 800; // Pixels
 ros::Publisher locationPublisher;
 ros::Publisher validPublisher;
 
@@ -36,7 +35,7 @@ void faceDetectedCallback(opencv_apps::FaceArrayStamped face_array) {
     // Find the angular error from the center
     opencv_apps::Rect bounding_rect = face_array.faces[0].face;
     std_msgs::Float64 goal;
-    goal.data = -deg2rad(78.0/2) * getErrorCam(bounding_rect.x, 0, 720);
+    goal.data = -deg2rad(78.0/2) * getErrorCam(bounding_rect.x, 0, cam_width);
     locationPublisher.publish(goal);
 }
 
@@ -50,9 +49,8 @@ int main(int argc, char **argv) {
         nodeHandler.advertise<std_msgs::Float64>("/goal", 1);
 
     validPublisher =
-        nodeHandler.advertise<std_msgs::Float64>("/valid", 1);
+        nodeHandler.advertise<std_msgs::Bool>("/valid", 1);
 
-    // The unfiltered input positions
     ros::Subscriber faceSubscriber =
         nodeHandler.subscribe(face_detector_group + "/faces", 10,
                               &faceDetectedCallback);
