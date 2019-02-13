@@ -6,49 +6,49 @@
 
   <link name="link1">
     <visual>
-      <origin rpy="0.0 0 0" xyz="0 0 0/>"
+      <origin rpy="0.0 0 0" xyz="0 0 0" />
       <geometry>
-        <mesh filename="package://barbot_support/meshes/Link0.STL"/>
+        <mesh filename="file://$(find bar-bot)/meshes/Link0.STL"/>
       </geometry>
     </visual>
   </link>
   <link name="link2">
     <visual>
-      <origin rpy="0.0 0 0" xyz="0 0 0/>"
+      <origin rpy="0.0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://barbot_support/meshes/Link1.STL"/>
+        <mesh filename="file://$(find bar-bot)/meshes/Link1.STL"/>
       </geometry>
     </visual>
   </link>
   <link name="link3">
     <visual>
-      <origin rpy="0.0 0 0" xyz="0 0 0/>"
+      <origin rpy="0.0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://barbot_support/meshes/Link2.STL"/>
+        <mesh filename="file://$(find bar-bot)/meshes/Link2.STL"/>
       </geometry>
     </visual>
   </link>
   <link name="link4">
     <visual>
-      <origin rpy="0.0 0 0" xyz="0 0 0/>"
+      <origin rpy="0.0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://barbot_support/meshes/Link3.STL"/>
+        <mesh filename="file://$(find bar-bot)/meshes/Link3.STL"/>
       </geometry>
     </visual>
   </link>
   <link name="link5">
     <visual>
-      <origin rpy="0.0 0 0" xyz="0 0 0/>"
+      <origin rpy="0.0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://barbot_support/meshes/Link4,5.STL"/>
+        <mesh filename="file://$(find bar-bot)/meshes/Link4,5.STL"/>
       </geometry>
     </visual>
   </link>
   <link name="link6">
     <visual>
-      <origin rpy="0.0 0 0" xyz="0 0 0/>"
+      <origin rpy="0.0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://barbot_support/meshes/Link4,5.STL"/>
+        <mesh filename="file://$(find bar-bot)/meshes/Link4,5.STL"/>
       </geometry>
     </visual>
   </link>
@@ -65,26 +65,27 @@
   <joint name="joint2" type="continuous">
     <parent link="link2"/>
     <child link="link3"/>
-    <origin xyz ="61.1 0 50" rpy="0 ${-pi/2} ${-pi/4}" />
+    <origin xyz ="61.1 0 50" rpy="0 1.570796 -0.78539816" />
     <axis xyz="0 1 0" />
   </joint>
 
   <joint name="joint3" type="continuous">
     <parent link="link3"/>
     <child link="link4"/>
-    <origin xyz ="155.56 0 -31.1" rpy="${pi} 0 ${-pi/2}" />
+    <origin xyz ="155.56 0 -31.1" rpy="3.1415926 0 -1.570796" />
     <axis xyz="0 0 1" />
   </joint>
 
   <joint name="joint4" type="continuous">
     <parent link="link4"/>
     <child link="link5"/>
-    <origin xyz ="142.42 0 -31.1" rpy="${pi} 0 ${-pi/4}" />
+    <origin xyz ="142.42 0 -31.1" rpy="3.1415926 0 -0.78539816" />
     <axis xyz="0 0 1" />
   </joint>
 
   <!-- GRIPPER -->
-  <joint name="joint5" type="revolute">
+  <!-- <joint name="joint5" type="revolute"> -->
+  <joint name="joint5" type="continuous">
     <parent link="link5"/>
     <child link="link6"/>
     <origin xyz ="81.1 0 0" rpy="0 0 0" />
