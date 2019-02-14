@@ -4,16 +4,20 @@
 #include "hebiros/EntryListSrv.h"
 #include "hebiros/AddGroupFromNamesSrv.h"
 #include "hebiros/SizeSrv.h"
-class HebiHelper{
+#include "std_msgs/Bool.h"
+#include "std_msgs/Float64.h"
+#include "sensor_msgs/JointState.h"
+
 using namespace hebiros;
+class HebiHelper{
 
 private:
     ros::NodeHandle n;
     sensor_msgs::JointState feedback;       // The actuator feedback struccture
     volatile int            feedbackvalid = 0;
     volatile double         goalpos;        // The goal position
-    volatile int 			valid;
-    volatile int 		    isValidPrev = 1;
+    volatile int            valid;
+    volatile int            isValidPrev = 1;
 
     std::string group_name;
     std::vector<std::string> names;
@@ -35,10 +39,6 @@ public:
     HebiHelper(std::string group_name,
         std::vector<std::string> names, std::vector<std::string> families);
 
-
-
 };
-
-
 
 #endif /** #ifndef __HEBI_HELPER__ **/

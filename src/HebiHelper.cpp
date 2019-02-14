@@ -1,15 +1,16 @@
-#include "HebiHelper.h"
+#include "HebiHelper.hpp"
+
 HebiHelper::HebiHelper(std::string group_name,
     std::vector<std::string> names, std::vector<std::string> families) :
     group_name(group_name), names(names), families(families){
         setupGroup();
     // Create a subscriber to listen for a goal.
-    goalSubscriber = n.subscribe("/goal", 100, HebiHelper::goalCallback&, this);
-    validSubscriber = n.subscribe("/valid", 100, HebiHelper::validCallback&, this);
+    goalSubscriber = n.subscribe("/goal", 100, &HebiHelper::goalCallback, this);
+    validSubscriber = n.subscribe("/valid", 100, &HebiHelper::validCallback, this);
 
     // Create a subscriber to receive feedback from the actuator group.
     feedback_subscriber = n.subscribe("/hebiros/"+group_name+"/feedback/joint_state",
-        100, HebiHelper::feedbackCallback&,this);
+        100, &HebiHelper::feedbackCallback,this);
 
     // Create a publisher to send commands to the actuator group.
     command_publisher= n.advertise<sensor_msgs::JointState>
@@ -32,7 +33,7 @@ HebiHelper::HebiHelper(std::string group_name,
 
 }
 
-void HebiHelper::setupGroup()){
+void HebiHelper::setupGroup(){
     // Ask the Hebi node to list the modules.  Create a client to their
     // service, instantiate a service class, and call.  This has no
     // input or output arguments.
@@ -57,9 +58,9 @@ void HebiHelper::setupGroup()){
     ROS_INFO("%s has been created and has size %d", group_name.c_str(), size_srv.response.size);
 }
 
-void HebiHelper::feedbackCallback(const sensor_msgs::JointState::ConstPtr & data)
+void HebiHelper::feedbackCallback(const sensor_msgs::JointState::ConstPtr& data)
 {
-  feedback = data;
+  feedback = *data;
   feedbackvalid = 1;
 }
 

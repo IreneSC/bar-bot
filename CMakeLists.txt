@@ -1,8 +1,6 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(bar-bot)
 
-
-
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
 
@@ -13,6 +11,7 @@ find_package(catkin REQUIRED)
 
 ## System dependencies are found with CMake's conventions
 find_package(catkin REQUIRED COMPONENTS
+  hebiros
   OpenCV
   roscpp
   sensor_msgs
@@ -109,7 +108,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES simple
-  CATKIN_DEPENDS roscpp sensor_msgs std_msgs message_runtime
+  CATKIN_DEPENDS roscpp sensor_msgs std_msgs message_runtime hebiros
 #  DEPENDS system_lib
 )
 
@@ -151,12 +150,17 @@ add_executable(kinematics_node src/kinematics_node.cpp)
 ## same as for the library above
 add_dependencies(face_tracker_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(kinematics_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(grabber_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(face_tracker_node
   ${catkin_LIBRARIES}
 )
 target_link_libraries(kinematics_node
+  ${catkin_LIBRARIES}
+)
+
+target_link_libraries(grabber_node
   ${catkin_LIBRARIES}
 )
 
