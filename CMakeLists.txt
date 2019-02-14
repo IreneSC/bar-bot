@@ -139,6 +139,7 @@ include_directories(
 ## The recommended prefix ensures that target names across packages don't collide
 add_executable(face_tracker_node src/face_tracker_node.cpp)
 add_executable(grabber_node src/grabber_node.cpp src/HebiHelper.cpp)
+add_executable(kinematics_node src/kinematics_node.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -149,9 +150,13 @@ add_executable(grabber_node src/grabber_node.cpp src/HebiHelper.cpp)
 ## Add cmake target dependencies of the executable
 ## same as for the library above
 add_dependencies(face_tracker_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(kinematics_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(face_tracker_node
+  ${catkin_LIBRARIES}
+)
+target_link_libraries(kinematics_node
   ${catkin_LIBRARIES}
 )
 
