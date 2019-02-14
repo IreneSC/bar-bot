@@ -3,7 +3,7 @@
 #include "sensor_msgs/JointState.h"
 
 constexpr int num_joints = 5;
-const std::vector<std::string> names = {"j1", "j2", "j3", "j4", "j5"};
+const std::vector<std::string> names = {"joint1", "joint2", "joint3", "joint4", "joint5"};
 const std::string target_subscriber_name("/gripper_position");
 const std::string joint_state_name("/joint_states");
 
@@ -51,6 +51,7 @@ sensor_msgs::JointState position2angles(const geometry_msgs::Point& position) {
 
     /* Check equations */
     if (equation3 < 0) {
+        std::cout << "Warning: eq3 < 0 for position: " << position << std::endl;
         equation3 = 0;
     }
 
@@ -66,6 +67,8 @@ sensor_msgs::JointState position2angles(const geometry_msgs::Point& position) {
     return joint_state;
 }
 
+// const geometry_msgs::PoseStamped& target_pose
+
 void processTargetState(const geometry_msgs::PoseStamped& target_pose) {
     const geometry_msgs::Point&      target_loc = target_pose.pose.position;
     const geometry_msgs::Quaternion& target_ori = target_pose.pose.orientation;
@@ -73,6 +76,7 @@ void processTargetState(const geometry_msgs::PoseStamped& target_pose) {
     angles.header.stamp = ros::Time::now();
     angles.name = names;
     joint_state_publisher.publish(angles);
+    std::cout << "Publised: " << angles << std::endl;
 }
 
 int main(int argc, char **argv) {
@@ -87,6 +91,9 @@ int main(int argc, char **argv) {
     ros::Subscriber target_subscriber =
         node_handler.subscribe(target_subscriber_name, 10,
                               &processTargetState);
+
+    /* Test: */
+    // std::vector<double>
 
     ros::spin();
 

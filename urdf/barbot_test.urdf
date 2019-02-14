@@ -2,13 +2,16 @@
 <robot name="barbot_test">
 
 <!-- LINKS -->
+  <link name="world">
+  </link>
+
 <!-- from stl's -->
 
   <link name="link1">
     <visual>
       <origin rpy="0.0 0 0" xyz="0 0 0" />
       <geometry>
-        <mesh filename="file://$(find bar-bot)/meshes/Link0.STL"/>
+        <mesh filename="package://bar-bot/mesh/Link0.STL" scale="0.001 0.001 0.001"/>
       </geometry>
     </visual>
   </link>
@@ -16,7 +19,7 @@
     <visual>
       <origin rpy="0.0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="file://$(find bar-bot)/meshes/Link1.STL"/>
+        <mesh filename="package://bar-bot/mesh/Link1.STL" scale="0.001 0.001 0.001"/>
       </geometry>
     </visual>
   </link>
@@ -24,7 +27,7 @@
     <visual>
       <origin rpy="0.0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="file://$(find bar-bot)/meshes/Link2.STL"/>
+        <mesh filename="package://bar-bot/mesh/Link2.STL" scale="0.001 0.001 0.001"/>
       </geometry>
     </visual>
   </link>
@@ -32,7 +35,7 @@
     <visual>
       <origin rpy="0.0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="file://$(find bar-bot)/meshes/Link3.STL"/>
+        <mesh filename="package://bar-bot/mesh/Link3.STL" scale="0.001 0.001 0.001"/>
       </geometry>
     </visual>
   </link>
@@ -40,7 +43,7 @@
     <visual>
       <origin rpy="0.0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="file://$(find bar-bot)/meshes/Link4,5.STL"/>
+        <mesh filename="package://bar-bot/mesh/Link4_5.STL" scale="0.001 0.001 0.001"/>
       </geometry>
     </visual>
   </link>
@@ -48,38 +51,46 @@
     <visual>
       <origin rpy="0.0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="file://$(find bar-bot)/meshes/Link4,5.STL"/>
+        <mesh filename="package://bar-bot/mesh/Link4_5.STL" scale="0.001 0.001 0.001"/>
       </geometry>
     </visual>
   </link>
 
 <!-- JOINTS -->
+  <joint name="world_joint" type="fixed">
+    <parent link="world"/>
+    <child link="link1"/>
+    <origin xyz ="0 0 0" rpy="0 0 0" />
+    <axis xyz="0 0 1" />
+  </joint>
 
   <joint name="joint1" type="continuous">
-    <parent link="link1"/>
+    <parent link="world"/>
+    <!-- <parent link="link1"/> -->
     <child link="link2"/>
-    <origin xyz ="0 0 31.1" rpy="0 0 0" />
+    <origin xyz ="0 0 0.0311" rpy="0 0 0" />
     <axis xyz="0 0 1" />
   </joint>
 
   <joint name="joint2" type="continuous">
-    <parent link="link2"/>
+    <parent link="world"/>
+    <!-- <parent link="link2"/> -->
     <child link="link3"/>
-    <origin xyz ="61.1 0 50" rpy="0 1.570796 -0.78539816" />
+    <origin xyz ="0.0611 0 0.050" rpy="0 -1.570796 -0.78539816" />
     <axis xyz="0 1 0" />
   </joint>
 
   <joint name="joint3" type="continuous">
     <parent link="link3"/>
     <child link="link4"/>
-    <origin xyz ="155.56 0 -31.1" rpy="3.1415926 0 -1.570796" />
+    <origin xyz ="0.15556 0 -0.0311" rpy="3.1415926 0 -1.570796" />
     <axis xyz="0 0 1" />
   </joint>
 
   <joint name="joint4" type="continuous">
     <parent link="link4"/>
     <child link="link5"/>
-    <origin xyz ="142.42 0 -31.1" rpy="3.1415926 0 -0.78539816" />
+    <origin xyz ="0.14142 0 -0.0311" rpy="3.1415926 0 -0.78539816" />
     <axis xyz="0 0 1" />
   </joint>
 
@@ -88,7 +99,7 @@
   <joint name="joint5" type="continuous">
     <parent link="link5"/>
     <child link="link6"/>
-    <origin xyz ="81.1 0 0" rpy="0 0 0" />
+    <origin xyz ="0.0811 0 0" rpy="0 0 0" />
     <axis xyz="1 0 0" />
     <!-- FILL IN LIMITS LATER -->
     <!-- <limit effort="xxx" lower="rads" upper="rads" velocity="xxx"/> -->
