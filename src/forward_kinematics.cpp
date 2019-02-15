@@ -1,35 +1,20 @@
-#include <eigen3/Eigen/Geometry>
-using namespace Eigen;
-Affine3d rotation_z(double theta){
-    return Affine3d(AngleAxisd(theta, Vector3d(0, 0, 1)));
-}
-Affine3d rotation_x(double theta){
-    return Affine3d(AngleAxisd(theta, Vector3d(1, 0, 0)));
-}
-Affine3d translation(double x, double y, double z){
-    return Affine3d(Translation3d(Vector3d(x,y,z)));
-}
+#include "forward_kinematics.hpp"
 
-Affine3d G1(double d, double theta){
-    return translation(0,0,d)*rotation_z(theta);
-}
-Affine3d G2(double theta){
-    return rotation_x(-M_PI/2.0)*rotation_z(theta);
-}
-Affine3d G3(double d, double theta){
-    return translation(d,0,0)*rotation_z(theta);
-}
-Affine3d G4(double d, double theta){
-    return translation(d,0,0)*rotation_z(theta);
-}
-Affine3d G5(double d){
-    return rotation_x(M_PI/2.0)*translation(0,0,-d);
-}
-Affine3d G6(double theta){
-    return rotation_z(theta);
-}
+geometry_msgs::Point jointangles2position(const sensor_msgs::JointState& joints) {
+    geometry_msgs::Point pt;
+    std::vector<double> thetas = joints.position
+    if (thetas.size() == 4){
+        ROS_INFO("4 angles given, assuming wrist rotation is 0");
+        thetas.push_back(0.0);
+    }
+    else if (thetas.size() != 5){
+        ROS_ERROR("Incorrect number of angles given");
+        return pt;
+    }
+    Affine3d transform = GST(d1, thetas[0], thetas[1], d3, thetas[2], d4, thetas[3], d5, thetas[4]);
+    Vector4d end = transform*Vector4d(0,0,0,1);
+    pt.x = end[0];
+    pt.y = end[1];
+    pt.z = end[2];
 
-Affine3d GST(double d1, double theta1, double theta2, double d3, double theta3,
-            double d4, double theta4, double d5, double theta6){
-    return G1(d1, theta1)*G2(theta2)*G3(d3, theta3)*G4(d4,theta4)*G5(d5)*G6(theta6);
 }
