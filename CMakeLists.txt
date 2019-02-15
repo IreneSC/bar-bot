@@ -16,6 +16,7 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   sensor_msgs
   std_msgs
+  tf
 )
 
   # message_generation
@@ -108,7 +109,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES simple
-  CATKIN_DEPENDS roscpp sensor_msgs std_msgs message_runtime hebiros
+  CATKIN_DEPENDS roscpp sensor_msgs std_msgs message_runtime hebiros tf
 #  DEPENDS system_lib
 )
 

@@ -1,17 +1,13 @@
 #include "ros/ros.h"
 #include "geometry_msgs/PoseStamped.h"
 #include "sensor_msgs/JointState.h"
+#include "forward_kinematics.hpp"
+#include "tf/transform_datatypes.h"
 
 constexpr int num_joints = 5;
-const std::vector<std::string> names = {"joint1", "joint2", "joint3", "joint4", "joint5"};
+const std::vector<std::string> names = {"joint_1", "joint_2", "joint_3", "joint_4", "joint_5"};
 const std::string target_subscriber_name("/gripper_position");
 const std::string joint_state_name("/joint_states");
-
-// Lengths in meters of arm components
-double d1 = .0311;
-double a2 = .0611;
-double a3 = .15556;
-double d5 = .14142;
 
 ros::Publisher joint_state_publisher;
 
@@ -21,6 +17,7 @@ static inline double sq(double x) {
 
 /* Calculates the link angles required to move the tool to a position/rotation */
 sensor_msgs::JointState position2angles(const geometry_msgs::Point& position) {
+    std::cout << "position: " << position << std::endl;
     sensor_msgs::JointState joint_state;
     std::vector<double> angles(num_joints);
     double x = position.x; double y = position.y; double z = position.z;
@@ -29,7 +26,7 @@ sensor_msgs::JointState position2angles(const geometry_msgs::Point& position) {
     double equation1; double equation2; double equation3;
 
     // ensure that w/in acos [-1,1] range
-    equation1 = (sq(x) + sq(y) + sq(z-d1 + d5) - sq(a2) - sq(a3)) / (2*sq(a3));
+    equation1 = (sq(x) + sq(y) + sq(z-d1 + d5) - sq(d3) - sq(d4)) / (2*sq(d4));
 
     // If out of range, do not update
     if (abs(equation1) > 1) {
@@ -44,9 +41,9 @@ sensor_msgs::JointState position2angles(const geometry_msgs::Point& position) {
     angles[0] = atan2(y,x); // RANGE : [-Pi,Pi]
     angles[2] = acos(equation1); // RANGE : [0,Pi]
 
-    equation2 = (-a3*sin(angles[2]) - sqrt(equation3)) /
-                    (a2 + a3*cos(angles[2]) + x/cos(angles[0]));
-    equation3 = sq((a2 + a3*cos(angles[2]))) + sq(a3*sin(angles[2])) -
+    equation2 = (-d4*sin(angles[2]) - sqrt(equation3)) /
+                    (d3 + d4*cos(angles[2]) + x/cos(angles[0]));
+    equation3 = sq((d3 + d4*cos(angles[2]))) + sq(d4*sin(angles[2])) -
                     sq(x/cos(angles[0]));
 
     /* Check equations */
@@ -75,6 +72,16 @@ void processTargetState(const geometry_msgs::PoseStamped& target_pose) {
     sensor_msgs::JointState angles = position2angles(target_loc);
     angles.header.stamp = ros::Time::now();
     angles.name = names;
+
+    // Set the roll of the gripper
+    tf::Quaternion q;
+    tf::quaternionMsgToTF(target_ori, q);
+    tf::Matrix3x3 m(q);
+    // Roll pitch yaw
+    double r, p, y;
+    m.getRPY(r, p, y);
+    angles.position[num_joints-1] = r;
+
     joint_state_publisher.publish(angles);
     std::cout << "Publised: " << angles << std::endl;
 }
@@ -93,7 +100,13 @@ int main(int argc, char **argv) {
                               &processTargetState);
 
     /* Test: */
-    // std::vector<double>
+    // std::vector<double> angles = {0, 0, -M_PI/2, 0};
+    std::vector<double> angles = {0, -0.1, 0.1, 0};
+    sensor_msgs::JointState joints;
+    joints.position = angles;
+    auto ret = position2angles(jointangles2position(joints));
+    std::cout << ret << std::endl;
+    std::cout << position2angles(jointangles2position(ret)) << std::endl;
 
     ros::spin();
 

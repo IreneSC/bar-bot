@@ -2,7 +2,7 @@
 
 geometry_msgs::Point jointangles2position(const sensor_msgs::JointState& joints) {
     geometry_msgs::Point pt;
-    std::vector<double> thetas = joints.position
+    std::vector<double> thetas = joints.position;
     if (thetas.size() == 4){
         ROS_INFO("4 angles given, assuming wrist rotation is 0");
         thetas.push_back(0.0);
