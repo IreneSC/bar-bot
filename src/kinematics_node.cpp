@@ -4,8 +4,8 @@
 #include "forward_kinematics.hpp"
 #include "tf/transform_datatypes.h"
 
-constexpr int num_joints = 5;
-const std::vector<std::string> names = {"joint_1", "joint_2", "joint_3", "joint_4", "joint_5"};
+constexpr int num_joints = 6;
+const std::vector<std::string> names = {"joint_1", "joint_2", "joint_3", "joint_4", "joint_5", "joint_tip"};
 const std::string target_subscriber_name("/gripper_position");
 const std::string joint_state_name("/joint_states");
 
@@ -25,21 +25,27 @@ sensor_msgs::JointState position2angles(const geometry_msgs::Point& position) {
     /* Equations that are re-used throughout the following code */
     double equation1; double equation2; double equation3;
 
+    /* kinematic equations TODO: label these angles */
+    angles[0] = atan2(y,x); // RANGE : [-Pi,Pi]
+
+    x = (x-cos(angles[0])*d5);
+    y = (y-sin(angles[0])*d5);
+    z = z - d5;
+
     // ensure that w/in acos [-1,1] range
     equation1 = (sq(x) + sq(y) + sq(z-d1 + d5) - sq(d3) - sq(d4)) / (2*sq(d4));
 
     // If out of range, do not update
     if (abs(equation1) > 1) {
         std::cout << "Invalid position: " << position << std::endl;
+        std::cout << "eq1 = " << equation1 << std::endl;
         // for (auto const& elt : position)
         //     std::cout << elt << ", ";
         // std::cout << "]" << std::endl;
         return joint_state;
     }
 
-    /* kinematic equations TODO: label these angles */
-    angles[0] = atan2(y,x); // RANGE : [-Pi,Pi]
-    angles[2] = acos(equation1); // RANGE : [0,Pi]
+    angles[2] = acos(equation1) ; // RANGE : [0,Pi]
 
     equation2 = (-d4*sin(angles[2]) - sqrt(equation3)) /
                     (d3 + d4*cos(angles[2]) + x/cos(angles[0]));
@@ -53,13 +59,9 @@ sensor_msgs::JointState position2angles(const geometry_msgs::Point& position) {
     }
 
     /* kinematic equations TODO: label these angles */
-    angles[1] = 2 * atan(equation2); // RANGE : [-Pi/2,Pi/2]
+    angles[1] = 2 * atan(equation2) ;//- M_PI/4; // RANGE : [-Pi/2,Pi/2]
     angles[3] = -(angles[1] + angles[2]); // RANGE : [-2*Pi,2*Pi]
 
-    // Convert the values to degrees
-    // for (int i = 0; i < num_joints; i++){
-    //     angles[i] = angles[i]/DEGREE;
-    // }
     joint_state.position = angles;
     return joint_state;
 }
@@ -99,14 +101,29 @@ int main(int argc, char **argv) {
         node_handler.subscribe(target_subscriber_name, 10,
                               &processTargetState);
 
+// #define TEST_ANGLE
+
     /* Test: */
+#ifdef TEST_ANGLE
     // std::vector<double> angles = {0, 0, -M_PI/2, 0};
-    std::vector<double> angles = {0, -0.1, 0.1, 0};
+    std::vector<double> angles = {0, 0, 0, 0};
     sensor_msgs::JointState joints;
     joints.position = angles;
     auto ret = position2angles(jointangles2position(joints));
     std::cout << ret << std::endl;
+    std::cout << "after ret" <<std::endl;
     std::cout << position2angles(jointangles2position(ret)) << std::endl;
+#else
+    geometry_msgs::Point positions;
+    positions.x = .45;
+    positions.y = 0;
+    positions.z = 0.0861;
+    auto ret = jointangles2position(position2angles(positions));
+    std::cout << ret << std::endl;
+    std::cout << jointangles2position(position2angles(ret)) << std::endl;
+    std::cout << "Done printing" << std::endl;
+#endif
+
 
     ros::spin();
 
@@ -114,4 +131,3 @@ int main(int argc, char **argv) {
 
     return 0;
 }
-

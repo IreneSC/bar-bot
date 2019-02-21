@@ -12,8 +12,6 @@
   </node>
 
   <node name="jsp" pkg="joint_state_publisher" type="joint_state_publisher">
-    <!-- <remap from="joint_states" to="/hebiros/all/feedback/joint_state"/> -->
-    <!-- <param name="ignore_timestamp" value="true"/> -->
     <param name="use_gui" value="true"/>
   </node>
 

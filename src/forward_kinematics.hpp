@@ -5,15 +5,20 @@
 #include "geometry_msgs/PoseStamped.h"
 #include "sensor_msgs/JointState.h"
 
+// #define DEBUG_MODE
+
 // Lengths in meters of arm components
-// static constexpr double d1 = 1;
-// static constexpr double d3 = 1;
-// static constexpr double d4 = 1;
-// static constexpr double d5 = 1;
-static constexpr double d1 = .0311;
-static constexpr double d3 = .0611;
-static constexpr double d4 = .15556;
-static constexpr double d5 = .14142;
+#ifdef DEBUG_MODE
+static constexpr double d1 = 1;
+static constexpr double d3 = 1;
+static constexpr double d4 = 1;
+static constexpr double d5 = 1;
+#else
+static constexpr double d1 = .0861;
+static constexpr double d3 = .15556;
+static constexpr double d4 = .14142;
+static constexpr double d5 = .1827;
+#endif
 
 using namespace Eigen;
 static inline Affine3d rotation_z(double theta){
@@ -39,7 +44,11 @@ static inline Affine3d G4(double d, double theta){
     return translation(d,0,0)*rotation_z(theta);
 }
 static inline Affine3d G5(double d){
-    return rotation_x(M_PI/2.0)*translation(0,0,-d);
+// #ifndef DEBUG_MODE
+    // return rotation_x(M_PI/2.0)*translation(0,0,-d);
+// #else
+    return rotation_x(M_PI/2.0)*translation(d,0,0);
+// #endif
 }
 static inline Affine3d G6(double theta){
     return rotation_z(theta);
