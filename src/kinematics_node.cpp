@@ -28,6 +28,7 @@ sensor_msgs::JointState position2angles(const geometry_msgs::Point& position) {
     /* kinematic equations TODO: label these angles */
     angles[0] = atan2(y,x); // RANGE : [-Pi,Pi]
 
+    const double x_orig = x;
     x = (x-cos(angles[0])*d5);
     y = (y-sin(angles[0])*d5);
     z = z - d5;
@@ -47,16 +48,18 @@ sensor_msgs::JointState position2angles(const geometry_msgs::Point& position) {
 
     angles[2] = acos(equation1) ; // RANGE : [0,Pi]
 
-    equation2 = (-d4*sin(angles[2]) - sqrt(equation3)) /
-                    (d3 + d4*cos(angles[2]) + x/cos(angles[0]));
     equation3 = sq((d3 + d4*cos(angles[2]))) + sq(d4*sin(angles[2])) -
-                    sq(x/cos(angles[0]));
+                    sq(x_orig/cos(angles[0]));
 
     /* Check equations */
     if (equation3 < 0) {
         std::cout << "Warning: eq3 < 0 for position: " << position << std::endl;
         equation3 = 0;
     }
+
+    equation2 = (-d4*sin(angles[2]) - sqrt(equation3)) /
+                    (d3 + d4*cos(angles[2]) + x_orig/cos(angles[0]));
+
 
     /* kinematic equations TODO: label these angles */
     angles[1] = 2 * atan(equation2) ;//- M_PI/4; // RANGE : [-Pi/2,Pi/2]
@@ -101,7 +104,7 @@ int main(int argc, char **argv) {
         node_handler.subscribe(target_subscriber_name, 10,
                               &processTargetState);
 
-// #define TEST_ANGLE
+#define TEST_ANGLE
 
     /* Test: */
 #ifdef TEST_ANGLE
