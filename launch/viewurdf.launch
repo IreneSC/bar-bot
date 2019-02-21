@@ -1,5 +1,5 @@
 <launch>
-  <param name="robot_description" textfile="$(find bar-bot)/urdf/solidworks-bar-bot.urdf"/>
+  <param name="robot_description" textfile="$(find bar-bot)/urdf/basic_arm.urdf"/>
   <!-- <param name="robot_description" textfile="$(find bar-bot)/urdf/test.urdf"/> -->
 
   <node name="hebiros_node" pkg="hebiros" type="hebiros_node" respawn="false" output="screen"/>

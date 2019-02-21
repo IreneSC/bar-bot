@@ -1,0 +1,91 @@
+<?xml version="1.0"?>
+
+<robot name="myrobot">
+
+  <!-- ******************** Materials ******************** -->
+
+  <material name="white">    <color rgba="1.00 1.00 1.00 1"/>  </material>
+  <material name="gray">     <color rgba="0.60 0.60 0.60 1"/>  </material>
+
+  <material name="hebired">  <color rgba="0.82 0.06 0.06 1"/>  </material>
+
+  <material name="red">      <color rgba="1.00 0.00 0.00 1"/>  </material>
+  <material name="green">    <color rgba="0.00 1.00 0.00 1"/>  </material>
+  <material name="blue">     <color rgba="0.00 0.00 1.00 1"/>  </material>
+
+  <material name="cyan">     <color rgba="0.00 1.00 1.00 1"/>  </material>
+  <material name="magenta">  <color rgba="1.00 0.00 1.00 1"/>  </material>
+  <material name="yellow">   <color rgba="1.00 1.00 0.00 1"/>  </material>
+
+  <!-- ******************** Kinematics ******************** -->
+
+  <joint name="z_rotate" type="continuous">
+    <parent link="world"/>
+    <child  link="link1"/>
+    <origin xyz="0 0 0.0861" rpy="0 0 0"/>
+    <axis   xyz="0 0 1"/>
+  </joint>
+
+  <joint name="pitch_1" type="continuous">
+    <parent link="link1"/>
+    <child  link="link2"/>
+    <origin xyz="0 .15556 0" rpy="0 0 0"/>
+    <axis   xyz="1 0 0"/>
+  </joint>
+
+  <joint name="pitch_2" type="continuous">
+    <parent link="link2"/>
+    <child  link="link3"/>
+    <origin xyz="0 .14142 0" rpy="0 0 0"/>
+    <axis   xyz="1 0 0"/>
+  </joint>
+
+  <joint name="pitch_3" type="continuous">
+    <parent link="link3"/>
+    <child  link="link4"/>
+    <origin xyz="0 .1827 0" rpy="0 0 0"/>
+    <axis   xyz="1 0 0"/>
+  </joint>
+
+  <joint name="yaw" type="continuous">
+    <parent link="link4"/>
+    <child  link="tip"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <axis   xyz="0 1 0"/>
+  </joint>
+
+
+  <!-- ******************** World and Tip ******************** -->
+  <link name="world"> <visual>
+    <geometry> <sphere radius="0.01" /> </geometry>
+    <material name="magenta"/>
+  </visual> </link>
+
+  <link name="tip"> <visual>
+    <geometry> <sphere radius="0.01" /> </geometry>
+    <material name="yellow"/>
+  </visual> </link>
+
+  <!-- ******************** Baseplate ******************** -->
+  <joint name="baseplate_attachment" type="fixed">
+    <parent link="world"/> <child link="baseplate"/>
+  </joint>
+
+  <link name="baseplate"> <visual>
+    <origin rpy="0 0 0" xyz="0.0 0.0 -0.051" />
+    <geometry>    <box size="0.2 0.2  0.02"  /> </geometry>
+    <material name="white"/>
+  </visual> </link>
+
+  <!-- ******************** Intermediate Links ******************** -->
+  <link name="link1"> </link>
+
+  <link name="link2"> </link>
+
+  <link name="link3"> </link>
+
+  <link name="link4"> </link>
+
+  </visual> </link>
+
+</robot>
