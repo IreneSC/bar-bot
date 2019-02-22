@@ -10,6 +10,7 @@ static constexpr double d1 = .0861;
 static constexpr double d2 = .15556;
 static constexpr double d3 = .14142;
 static constexpr double d4 = .1827;
+constexpr int num_joints = 5;
 
 
 using namespace Eigen;
@@ -47,22 +48,22 @@ static inline Affine3d GST(double theta1, double theta2, double theta3,
     return G1(theta1)*G2(d1, theta2)*G3(d2, theta3)*G4(d3, theta4)*G5(d4, theta5);
 }
 
-static inline double theta1(y,x){
+static inline double theta1(double y,double x){
     return atan2(y,x);
 }
-static inline double theta2(r,z){
+static inline double theta2(double r, double z){
     double alpha = atan2(r,z); // angle to z from horizontal
     //angle from z up to arm using law of cosines
     double beta = acos((d2*d2 + r*r + z*z - d3*d3)/(2*d2*sqrt(r*r + z*z)));
     return alpha + beta;
 }
-static inline double theta3(r,z){
+static inline double theta3(double r,double z){
     return acos((d2*d2 + d3*d3 -r*r - z*z)/(2*d2*d3)) - M_PI;
 }
-static inline double theta4(theta2, theta3){
+static inline double theta4(double theta2, double theta3){
     return -theta2 - theta3;
 }
 
-geometry_msgs::Point jointangles2position(const sensor_msgs::JointState& joints);
-sensor_msgs::JointState position2jointangles(const geometry_msgs::Point& joints);
+geometry_msgs::Point jointAnglesToPosition(const sensor_msgs::JointState& joints);
+sensor_msgs::JointState positionToJointAngles(const geometry_msgs::Point& joints);
 #endif

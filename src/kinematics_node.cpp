@@ -4,8 +4,7 @@
 #include "kinematics.hpp"
 #include "tf/transform_datatypes.h"
 
-constexpr int num_joints = 6;
-const std::vector<std::string> names = {"joint_1", "joint_2", "joint_3", "joint_4", "joint_5", "joint_tip"};
+const std::vector<std::string> names = {"z_rotate", "pitch_1", "pitch_2", "pitch_3", "yaw"};
 const std::string target_subscriber_name("/gripper_position");
 const std::string joint_state_name("/joint_states");
 
@@ -14,7 +13,7 @@ ros::Publisher joint_state_publisher;
 void processTargetState(const geometry_msgs::PoseStamped& target_pose) {
     const geometry_msgs::Point&      target_loc = target_pose.pose.position;
     const geometry_msgs::Quaternion& target_ori = target_pose.pose.orientation;
-    sensor_msgs::JointState angles = position2angles(target_loc);
+    sensor_msgs::JointState angles = positionToJointAngles(target_loc);
     angles.header.stamp = ros::Time::now();
     angles.name = names;
 
@@ -25,6 +24,7 @@ void processTargetState(const geometry_msgs::PoseStamped& target_pose) {
     // Roll pitch yaw
     double r, p, y;
     m.getRPY(r, p, y);
+    std::cout << "sizes: " << num_joints - 1 << ", " << angles.position.size() << std::endl;
     angles.position[num_joints-1] = r;
 
     joint_state_publisher.publish(angles);
@@ -49,26 +49,39 @@ int main(int argc, char **argv) {
     /* Test: */
 #ifdef TEST_ANGLE
     // std::vector<double> angles = {0, 0, -M_PI/2, 0};
-    std::vector<double> angles = {0, 0, 0, 0};
-    sensor_msgs::JointState joints;
-    joints.position = angles;
-    auto ret = position2angles(jointangles2position(joints));
-    std::cout << ret << std::endl;
-    std::cout << "after ret" <<std::endl;
-    std::cout << position2angles(jointangles2position(ret)) << std::endl;
+    while(ros::ok()) {
+        std::vector<double> angles = {0, 0, 0, 0};
+        // std::vector<double> angles = {0.1, 0.2, 0.1, -.3};
+        sensor_msgs::JointState joints;
+        joints.position = angles;
+
+
+        // auto ret = positionToJointAngles(jointAnglesToPosition(joints));
+        auto ret = jointAnglesToPosition(joints);
+        std::cout << ret << std::endl;
+        geometry_msgs::PoseStamped target_pose;
+        target_pose.pose.position = ret;
+
+        tf::Quaternion q;
+        q.setRPY(0,0,0);
+        tf::quaternionTFToMsg(q, target_pose.pose.orientation);
+
+        processTargetState(target_pose);
+        std::cout << "after ret" <<std::endl;
+        ros::spinOnce();
+    }
+    // std::cout << positionToJointAngles(jointAnglesToPosition(ret)) << std::endl;
 #else
     geometry_msgs::Point positions;
     positions.x = .45;
     positions.y = 0;
     positions.z = 0.0861;
-    auto ret = jointangles2position(position2angles(positions));
+    auto ret = jointAnglesToPosition(positionToJointAngles(positions));
     std::cout << ret << std::endl;
-    std::cout << jointangles2position(position2angles(ret)) << std::endl;
+    std::cout << jointAnglesToPosition(positionToJointAngles(ret)) << std::endl;
     std::cout << "Done printing" << std::endl;
 #endif
 
-
-    ros::spin();
 
     ros::shutdown();
 

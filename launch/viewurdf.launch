@@ -11,9 +11,11 @@
     <param name="ignore_timestamp" value="true"/>
   </node>
 
-  <node name="jsp" pkg="joint_state_publisher" type="joint_state_publisher">
-    <param name="use_gui" value="true"/>
-  </node>
+  <!-- <node name="jsp" pkg="joint_state_publisher" type="joint_state_publisher"> -->
+  <!--   <param name="use_gui" value="true"/> -->
+  <!-- </node> -->
+
+  <node name="kinematics" pkg="bar-bot" type="kinematics_node" />
 
   <node name="rviz" pkg="rviz" type="rviz" args="-d $(find bar-bot)/rviz/viewrobot.rviz"/>
 </launch>
