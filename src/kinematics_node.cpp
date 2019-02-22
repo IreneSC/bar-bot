@@ -11,9 +11,6 @@ const std::string joint_state_name("/joint_states");
 
 ros::Publisher joint_state_publisher;
 
-static inline double sq(double x) {
-    return x*x;
-}
 void processTargetState(const geometry_msgs::PoseStamped& target_pose) {
     const geometry_msgs::Point&      target_loc = target_pose.pose.position;
     const geometry_msgs::Quaternion& target_ori = target_pose.pose.orientation;
