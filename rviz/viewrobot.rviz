@@ -8,8 +8,6 @@ Panels:
         - /Status1
         - /TF1
         - /TF1/Frames1
-        - /TF1/Frames1/link_51
-        - /TF1/Frames1/link_51/Position1
       Splitter Ratio: 0.5
     Tree Height: 1712
   - Class: rviz/Selection
@@ -64,27 +62,28 @@ Visualization Manager:
         Expand Link Details: false
         Expand Tree: false
         Link Tree Style: Links in Alphabetic Order
-        link_1:
+        baseplate:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        link_2:
+        link1:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-          Value: true
-        link_3:
+        link2:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-          Value: true
-        link_4:
+        link3:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-          Value: true
-        link_5:
+        link4:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        tip:
           Alpha: 1
           Show Axes: false
           Show Trail: false
@@ -93,6 +92,7 @@ Visualization Manager:
           Alpha: 1
           Show Axes: false
           Show Trail: false
+          Value: true
       Name: RobotModel
       Robot Description: robot_description
       TF Prefix: ""
@@ -104,16 +104,18 @@ Visualization Manager:
       Frame Timeout: 15
       Frames:
         All Enabled: false
-        link_1:
-          Value: false
-        link_2:
-          Value: false
-        link_3:
-          Value: false
-        link_4:
-          Value: false
-        link_5:
-          Value: false
+        baseplate:
+          Value: true
+        link1:
+          Value: true
+        link2:
+          Value: true
+        link3:
+          Value: true
+        link4:
+          Value: true
+        tip:
+          Value: true
         world:
           Value: true
       Marker Scale: 1
@@ -123,11 +125,13 @@ Visualization Manager:
       Show Names: false
       Tree:
         world:
-          link_1:
-            link_2:
-              link_3:
-                link_4:
-                  link_5:
+          baseplate:
+            {}
+          link1:
+            link2:
+              link3:
+                link4:
+                  tip:
                     {}
       Update Interval: 0
       Value: true
@@ -171,10 +175,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.6303983330726624
+      Pitch: 0.300398588180542
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 4.3535847663879395
+      Yaw: 3.263577461242676
     Saved: ~
 Window Geometry:
   Displays:

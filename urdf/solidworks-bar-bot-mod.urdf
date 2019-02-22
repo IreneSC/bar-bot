@@ -1,0 +1,312 @@
+<?xml version="1.0"?>
+
+<!-- Copied old solidworks-bar-bot.urdf here -->
+
+<robot
+  name="ShiggyDiggy">
+  <link
+    name="world">
+    <inertial>
+      <origin
+        xyz="0.0228873277740538 -0.0192377122317781 1.6596570853809E-19"
+        rpy="0 0 0" />
+      <mass
+        value="0.250135388974212" />
+      <inertia
+        ixx="5.49414753497412E-06"
+        ixy="-3.33112291147392E-06"
+        ixz="-7.03406901075549E-22"
+        iyy="2.01967271186479E-06"
+        iyz="-1.16015571755593E-21"
+        izz="7.51382024683892E-06" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://bar-bot/mesh/base_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://bar-bot/mesh/base_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <link
+    name="link_1">
+    <inertial>
+      <origin
+        xyz="0.0238623618445129 -8.68106703015808E-18 -0.0156442716587478"
+        rpy="0 0 0" />
+      <mass
+        value="0.0344061528152689" />
+      <inertia
+        ixx="0"
+        ixy="0"
+        ixz="0"
+        iyy="0"
+        iyz="0"
+        izz="0" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://bar-bot/mesh/link_1.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://bar-bot/mesh/link_1.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="joint_1"
+    type="continuous">
+    <origin
+      xyz="0 -0.0361 0"
+      rpy="0 -6.12303176911189E-17 -1.5707963267949" />
+    <parent
+      link="world" />
+    <child
+      link="link_1" />
+    <axis
+      xyz="0 0 1" />
+  </joint>
+  <link
+    name="link_2">
+    <inertial>
+      <origin
+        xyz="0.0777817459305 -5.55111512312578E-17 -0.0105954055001962"
+        rpy="0 0 0" />
+      <mass
+        value="0.611278584185544" />
+      <inertia
+        ixx="4.7232830097985E-05"
+        ixy="-4.69614366193551E-19"
+        ixz="-1.86419341144439E-19"
+        iyy="0.00148596332609589"
+        iyz="-2.62045054919466E-19"
+        izz="0.0014387304959979" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://bar-bot/mesh/link_2.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://bar-bot/mesh/link_2.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="joint_2"
+    type="continuous">
+    <origin
+      xyz="0.05 0 -0.0611"
+      rpy="-3.14159265358979 6.93889390390723E-16 1.5707963267949" />
+    <parent
+      link="link_1" />
+    <child
+      link="link_2" />
+    <axis
+      xyz="0 0 1" />
+  </joint>
+  <link
+    name="link_3">
+    <inertial>
+      <origin
+        xyz="0.101236594152 0 0.00790252026148286"
+        rpy="0 0 0" />
+      <mass
+        value="0.369429274310776" />
+      <inertia
+        ixx="3.64522375324023E-05"
+        ixy="2.53823109397908E-19"
+        ixz="-8.6241906200563E-05"
+        iyy="0.000240490916323941"
+        iyz="1.07284505672546E-19"
+        izz="0.000204038678791539" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://bar-bot/mesh/link_3.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://bar-bot/mesh/link_3.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="joint_3"
+    type="continuous">
+    <origin
+      xyz="0.155563491861 0 -0.0311"
+      rpy="-8.28462607962256E-15 -3.67369593542186E-16 -9.57960920412926E-17" />
+    <parent
+      link="link_2" />
+    <child
+      link="link_3" />
+    <axis
+      xyz="0 0 1" />
+  </joint>
+  <link
+    name="link_4">
+    <inertial>
+      <origin
+        xyz="0.051946024025035 0.0364074915584401 -1.38777878078145E-17"
+        rpy="0 0 0" />
+      <mass
+        value="0.336419418486383" />
+      <inertia
+        ixx="4.29940836846642E-06"
+        ixy="2.43788252763637E-05"
+        ixz="-4.73511269849855E-20"
+        iyy="0.000138234629260738"
+        iyz="8.470329472543E-21"
+        izz="0.000142534037629204" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://bar-bot/mesh/link_4.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://bar-bot/mesh/link_4.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="joint_4"
+    type="continuous">
+    <origin
+      xyz="0.141421356237 0 0.0311"
+      rpy="-1.57079632679489 1.08850772402958E-15 -0.0120495748569734" />
+    <parent
+      link="link_3" />
+    <child
+      link="link_4" />
+    <axis
+      xyz="0 1 0" />
+  </joint>
+  <link
+    name="link_5">
+    <inertial>
+      <origin
+        xyz="6.37664261435578E-05 -0.000975043041766946 0.0508117745219454"
+        rpy="0 0 0" />
+      <mass
+        value="0.196644768" />
+      <inertia
+        ixx="0"
+        ixy="0"
+        ixz="0"
+        iyy="0"
+        iyz="0"
+        izz="0" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://bar-bot/mesh/link_5.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://bar-bot/mesh/link_5.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="joint_5"
+    type="continuous">
+    <origin
+      xyz="0.0810882254780547 0.0560999999999999 0.000977125933747033"
+      rpy="1.57079632679489 0.0653055782012251 1.5707963267949" />
+    <parent
+      link="link_4" />
+    <child
+      link="link_5" />
+    <axis
+      xyz="0 0 1" />
+  </joint>
+</robot>

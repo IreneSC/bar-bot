@@ -31,7 +31,7 @@ sensor_msgs::JointState position2angles(const geometry_msgs::Point& position) {
     const double x_orig = x;
     x = (x-cos(angles[0])*d5);
     y = (y-sin(angles[0])*d5);
-    z = z - d5;
+    z = z - d1;
 
     // ensure that w/in acos [-1,1] range
     equation1 = (sq(x) + sq(y) + sq(z-d1 + d5) - sq(d3) - sq(d4)) / (2*sq(d4));
