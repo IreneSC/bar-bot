@@ -1,13 +1,15 @@
 #include "HebiHelper.hpp"
 
-HebiHelper::HebiHelper(std::string group_name,
-        std::vector<std::string> names, std::vector<std::string> families) :
+HebiHelper::HebiHelper(ros::NodeHandle n,
+        const std::string& group_name,
+        const std::vector<std::string>& names,
+        const std::vector<std::string>& families) :
     group_name(group_name), names(names), families(families)
 {
-    setupGroup();
+    setupGroup(n);
     // Create a subscriber to listen for a goal.
-    goalSubscriber = n.subscribe("/goal", 100, &HebiHelper::goalCallback, this);
-    validSubscriber = n.subscribe("/valid", 100, &HebiHelper::validCallback, this);
+    // goalSubscriber = n.subscribe("/goal", 100, &HebiHelper::goalCallback, this);
+    // validSubscriber = n.subscribe("/valid", 100, &HebiHelper::validCallback, this);
 
     // Create a subscriber to receive feedback from the actuator group.
     feedback_subscriber = n.subscribe("/hebiros/"+group_name+"/feedback/joint_state",
@@ -17,23 +19,26 @@ HebiHelper::HebiHelper(std::string group_name,
     command_publisher= n.advertise<sensor_msgs::JointState>
         ("/hebiros/"+group_name+"/command/joint_state", 100);
 
-    command_msg.name = names;
-    command_msg.position.resize(names.size());
-    command_msg.velocity.resize(names.size());
-    command_msg.effort.resize(names.size());
+    // command_msg.name = names;
+    // command_msg.position.resize(names.size());
+    // command_msg.velocity.resize(names.size());
+    // command_msg.effort.resize(names.size());
 
+    for (auto i = 0; i < names.size(); i++) {
+        this->names[i] = families[i] + "/" + names[i];
+    }
     ros::Rate loop_rate(200);
     // Wait until we have some feedback from the actuator.
-    ROS_INFO("Waiting for initial feedback");
-    while (!feedbackvalid)
-    {
-        ros::spinOnce();
-        loop_rate.sleep();
-    }
-    ROS_INFO("Obtained initial feedback");
+    // ROS_INFO("Waiting for initial feedback");
+    // while (!feedbackvalid)
+    // {
+    //     ros::spinOnce();
+    //     loop_rate.sleep();
+    // }
+    // ROS_INFO("Obtained initial feedback");
 }
 
-void HebiHelper::setupGroup(){
+void HebiHelper::setupGroup(ros::NodeHandle n){
     // Ask the Hebi node to list the modules.  Create a client to their
     // service, instantiate a service class, and call.  This has no
     // input or output arguments.
@@ -63,23 +68,30 @@ void HebiHelper::setupGroup(){
 void HebiHelper::feedbackCallback(const sensor_msgs::JointState::ConstPtr& data)
 {
     feedback = *data;
-    feedbackvalid = 1;
+    // feedbackvalid = 1;
 }
 
 
 /*
  **   Goal Subscriber Callback
  */
-void HebiHelper::goalCallback(const std_msgs::Float64::ConstPtr& msg)
-{
-    goalpos = msg->data;
-}
+// void HebiHelper::goalCallback(const std_msgs::Float64::ConstPtr& msg)
+// {
+//     goalpos = msg->data;
+// }
 
-/*
- **   Valid goal Subscriber Callback
- */
-void HebiHelper::validCallback(const std_msgs::Bool::ConstPtr& msg)
+// /*
+//  **   Valid goal Subscriber Callback
+//  */
+// void HebiHelper::validCallback(const std_msgs::Bool::ConstPtr& msg)
+// {
+//     isValidPrev = valid;
+//     valid = msg->data;
+// }
+
+
+void HebiHelper::goToJointState(sensor_msgs::JointState joints)
 {
-    isValidPrev = valid;
-    valid = msg->data;
+    joints.name = names;
+    command_publisher.publish(joints);
 }
