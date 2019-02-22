@@ -139,7 +139,7 @@ include_directories(
 ## The recommended prefix ensures that target names across packages don't collide
 add_executable(face_tracker_node src/face_tracker_node.cpp)
 add_executable(grabber_node src/grabber_node.cpp src/HebiHelper.cpp)
-add_executable(kinematics_node src/kinematics_node.cpp src/forward_kinematics.cpp)
+add_executable(kinematics_node src/kinematics_node.cpp src/kinematics.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
