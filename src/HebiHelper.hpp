@@ -7,6 +7,7 @@
 #include "std_msgs/Bool.h"
 #include "std_msgs/Float64.h"
 #include "sensor_msgs/JointState.h"
+#include "kinematics.hpp"
 
 using namespace hebiros;
 class HebiHelper{
@@ -38,6 +39,10 @@ private:
 public:
     HebiHelper(std::string group_name,
         std::vector<std::string> names, std::vector<std::string> families);
+
+    const inline sensor_msgs::JointState getFeedback() { return feedback; }
+
+    const inline int isValid() { return valid; }
 
 };
 

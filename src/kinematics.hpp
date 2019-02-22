@@ -5,11 +5,12 @@
 #include "geometry_msgs/PoseStamped.h"
 #include "sensor_msgs/JointState.h"
 
+static const std::vector<std::string> joint_names = {"z_rotate", "pitch_1", "pitch_2", "pitch_3", "yaw"};
 
-static constexpr double d1 = .0861;
-static constexpr double d2 = .15556;
-static constexpr double d3 = .14142;
-static constexpr double d4 = .1827;
+static constexpr double d1 = .106;
+static constexpr double d2 = .16;
+static constexpr double d3 = .16;
+static constexpr double d4 = .16;
 constexpr int num_joints = 5;
 
 
@@ -49,16 +50,29 @@ static inline Affine3d GST(double theta1, double theta2, double theta3,
 }
 
 static inline double theta1(double y,double x){
-    return atan2(y,x);
+    return atan2(-x,y);
 }
 static inline double theta2(double r, double z){
-    double alpha = atan2(r,z); // angle to z from horizontal
+    double alpha = atan2(z,r); // angle to z from horizontal
+    std::cout << "alpha: " << alpha << std::endl;
     //angle from z up to arm using law of cosines
-    double beta = acos((d2*d2 + r*r + z*z - d3*d3)/(2*d2*sqrt(r*r + z*z)));
+    double acos_arg = (d2*d2 + r*r + z*z - d3*d3)/(2*d2*sqrt(r*r + z*z));
+    std::cout << "acos arg theta2: " << acos_arg << std::endl;
+    if (abs(acos_arg) > 1) {
+        ROS_WARN("acos arg too big: %f", acos_arg);
+        acos_arg /= abs(acos_arg);
+    }
+    double beta = acos(acos_arg);
     return alpha + beta;
 }
 static inline double theta3(double r,double z){
-    return acos((d2*d2 + d3*d3 -r*r - z*z)/(2*d2*d3)) - M_PI;
+    double acos_arg = (d2*d2 + d3*d3 -r*r - z*z)/(2*d2*d3);
+    std::cout << "acos arg theta3: " << acos_arg << std::endl;
+    if (abs(acos_arg) > 1) {
+        ROS_WARN("acos arg too big: %f", acos_arg);
+        acos_arg /= abs(acos_arg);
+    }
+    return acos(acos_arg) - M_PI;
 }
 static inline double theta4(double theta2, double theta3){
     return -theta2 - theta3;

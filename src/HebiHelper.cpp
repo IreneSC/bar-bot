@@ -1,36 +1,36 @@
 #include "HebiHelper.hpp"
 
 HebiHelper::HebiHelper(std::string group_name,
-    std::vector<std::string> names, std::vector<std::string> families) :
-    group_name(group_name), names(names), families(families){
-        setupGroup();
+        std::vector<std::string> names, std::vector<std::string> families) :
+    group_name(group_name), names(names), families(families)
+{
+    setupGroup();
     // Create a subscriber to listen for a goal.
     goalSubscriber = n.subscribe("/goal", 100, &HebiHelper::goalCallback, this);
     validSubscriber = n.subscribe("/valid", 100, &HebiHelper::validCallback, this);
 
     // Create a subscriber to receive feedback from the actuator group.
     feedback_subscriber = n.subscribe("/hebiros/"+group_name+"/feedback/joint_state",
-        100, &HebiHelper::feedbackCallback,this);
+            100, &HebiHelper::feedbackCallback,this);
 
     // Create a publisher to send commands to the actuator group.
     command_publisher= n.advertise<sensor_msgs::JointState>
         ("/hebiros/"+group_name+"/command/joint_state", 100);
 
-    command_msg.name.push_back("Arm/tapedispenser");//TODO: take this as input
-    command_msg.position.resize(1);
-    command_msg.velocity.resize(1);
-    command_msg.effort.resize(1);
+    command_msg.name = names;
+    command_msg.position.resize(names.size());
+    command_msg.velocity.resize(names.size());
+    command_msg.effort.resize(names.size());
 
     ros::Rate loop_rate(200);
     // Wait until we have some feedback from the actuator.
     ROS_INFO("Waiting for initial feedback");
     while (!feedbackvalid)
-      {
+    {
         ros::spinOnce();
         loop_rate.sleep();
-      }
-
-
+    }
+    ROS_INFO("Obtained initial feedback");
 }
 
 void HebiHelper::setupGroup(){
@@ -48,8 +48,10 @@ void HebiHelper::setupGroup(){
     add_group_srv.request.group_name = group_name;
     add_group_srv.request.names = names;
     add_group_srv.request.families = families;
+    ROS_INFO("Waiting until added successfully");
     // Repeatedly call the service until it succeeds.
-    while(!add_group_client.call(add_group_srv)) ;
+    while(!add_group_client.call(add_group_srv)){};
+    ROS_INFO("Added successfully");
 
     // Check the size of this group.  This has an output argument.
     ros::ServiceClient size_client = n.serviceClient<SizeSrv>("/hebiros/"+group_name+"/size");
@@ -60,24 +62,24 @@ void HebiHelper::setupGroup(){
 
 void HebiHelper::feedbackCallback(const sensor_msgs::JointState::ConstPtr& data)
 {
-  feedback = *data;
-  feedbackvalid = 1;
+    feedback = *data;
+    feedbackvalid = 1;
 }
 
 
 /*
-**   Goal Subscriber Callback
-*/
+ **   Goal Subscriber Callback
+ */
 void HebiHelper::goalCallback(const std_msgs::Float64::ConstPtr& msg)
 {
-  goalpos = msg->data;
+    goalpos = msg->data;
 }
 
 /*
-**   Valid goal Subscriber Callback
-*/
+ **   Valid goal Subscriber Callback
+ */
 void HebiHelper::validCallback(const std_msgs::Bool::ConstPtr& msg)
 {
-  isValidPrev = valid;
-  valid = msg->data;
+    isValidPrev = valid;
+    valid = msg->data;
 }

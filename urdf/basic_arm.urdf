@@ -29,28 +29,28 @@
   <joint name="pitch_1" type="continuous">
     <parent link="link1"/>
     <child  link="link2"/>
-    <origin xyz="0 0 0.0861" rpy="0 0 0"/>
+    <origin xyz="0 0 .106" rpy="0 0 0"/>
     <axis   xyz="1 0 0"/>
   </joint>
 
   <joint name="pitch_2" type="continuous">
     <parent link="link2"/>
     <child  link="link3"/>
-    <origin xyz="0 .15556 0" rpy="0 0 0"/>
-    <axis   xyz="1 0 0"/>
+    <origin xyz="0 .16 0" rpy="0 0 0"/>
+    <axis   xyz="-1 0 0"/>
   </joint>
 
   <joint name="pitch_3" type="continuous">
     <parent link="link3"/>
     <child  link="link4"/>
-    <origin xyz="0 .14142 0" rpy="0 0 0"/>
+    <origin xyz="0 .16 0" rpy="0 0 0"/>
     <axis   xyz="1 0 0"/>
   </joint>
 
   <joint name="yaw" type="continuous">
     <parent link="link4"/>
     <child  link="tip"/>
-    <origin xyz="0 .1827 0" rpy="0 0 0"/>
+    <origin xyz="0 .16 0" rpy="0 0 0"/>
     <axis   xyz="0 1 0"/>
   </joint>
 
