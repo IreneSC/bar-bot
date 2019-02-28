@@ -14,9 +14,11 @@ find_package(catkin REQUIRED COMPONENTS
   hebiros
   OpenCV
   roscpp
+  rospy
   sensor_msgs
   std_msgs
   tf
+  cv_bridge
 )
 
   # message_generation
@@ -109,7 +111,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES simple
-  CATKIN_DEPENDS roscpp sensor_msgs std_msgs message_runtime hebiros tf
+  CATKIN_DEPENDS roscpp rospy sensor_msgs std_msgs message_runtime hebiros tf
 #  DEPENDS system_lib
 )
 
@@ -174,10 +176,10 @@ target_link_libraries(grabber_node
 
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
-# install(PROGRAMS
-#   scripts/my_python_script
-#   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-# )
+install(PROGRAMS
+  scripts/cup_detector.py
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
 
 ## Mark executables and/or libraries for installation
 # install(TARGETS ${PROJECT_NAME} ${PROJECT_NAME}_node
