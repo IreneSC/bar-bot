@@ -7,10 +7,10 @@
 
 static const std::vector<std::string> joint_names = {"z_rotate", "pitch_1", "pitch_2", "pitch_3", "yaw"};
 
-static constexpr double d1 = .106;
-static constexpr double d2 = .16;
-static constexpr double d3 = .16;
-static constexpr double d4 = .16;
+static constexpr double d1 = .105;
+static constexpr double d2 = .38;
+static constexpr double d3 = .38;
+static constexpr double d4 = .11;
 constexpr int num_joints = 5;
 
 
@@ -72,8 +72,10 @@ static inline double theta3(double r,double z){
         ROS_WARN("acos arg too big: %f", acos_arg);
         acos_arg /= abs(acos_arg);
     }
-    return -(acos(acos_arg) - M_PI);
+    return acos(acos_arg) - M_PI;
 }
+
+// TODO: flip this as well?
 static inline double theta4(double theta2, double theta3){
     return -theta2 - theta3;
 }

@@ -1,5 +1,7 @@
 #include "HebiHelper.hpp"
 
+#define FLIP_PITCHES
+
 HebiHelper::HebiHelper(ros::NodeHandle n,
         const std::string& group_name,
         const std::vector<std::string>& names,
@@ -90,8 +92,14 @@ void HebiHelper::feedbackCallback(const sensor_msgs::JointState::ConstPtr& data)
 // }
 
 
+// NOTE: This method copies, and thus does not modify, its argument
 void HebiHelper::goToJointState(sensor_msgs::JointState joints)
 {
+#ifdef FLIP_PITCHES
+    joints.position[1] = -joints.position[1];
+    joints.position[2] = -joints.position[2];
+    joints.position[3] = joints.position[3];
+#endif
     joints.name = names;
     command_publisher.publish(joints);
 }

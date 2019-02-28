@@ -62,8 +62,8 @@ void processTargetState(const geometry_msgs::PoseStamped& target_pose) {
     sensor_msgs::JointState angles = positionToJointAngles(target_loc);
     initTrajectory(angles);
 
-    // angles.header.stamp = ros::Time::now();
-    // angles.name = joint_names;
+    angles.header.stamp = ros::Time::now();
+    angles.name = joint_names;
 
     // // Set the roll of the gripper
     // tf::Quaternion q;
@@ -75,9 +75,9 @@ void processTargetState(const geometry_msgs::PoseStamped& target_pose) {
     // // std::cout << "sizes: " << num_joints - 1 << ", " << angles.position.size() << std::endl;
     // // angles.position[num_joints-1] = r;
 
-    // joint_state_publisher.publish(angles);
+    joint_state_publisher.publish(angles);
     // helper_p->goToJointState(angles);
-    // // std::cout << "Publised: " << angles << std::endl;
+    std::cout << "Published: " << angles << std::endl;
 }
 
 
@@ -184,14 +184,21 @@ int main(int argc, char **argv) {
     }
     // std::cout << positionToJointAngles(jointAnglesToPosition(ret)) << std::endl;
 #else
-    geometry_msgs::Point positions;
-    positions.x = .45;
-    positions.y = 0;
-    positions.z = 0.0861;
-    auto ret = jointAnglesToPosition(positionToJointAngles(positions));
-    std::cout << ret << std::endl;
-    std::cout << jointAnglesToPosition(positionToJointAngles(ret)) << std::endl;
-    std::cout << "Done printing" << std::endl;
+    while(ros::ok()) {
+        sensor_msgs::JointState jointState;
+        std::vector<double> angles = {0, 0, .3, 0, 0};
+        jointState.position = angles;
+        helper_p->goToJointState(jointState);
+        ros::spinOnce();
+    }
+    // geometry_msgs::Point positions;
+    // positions.x = .45;
+    // positions.y = 0;
+    // positions.z = 0.0861;
+    // auto ret = jointAnglesToPosition(positionToJointAngles(positions));
+    // std::cout << ret << std::endl;
+    // std::cout << jointAnglesToPosition(positionToJointAngles(ret)) << std::endl;
+    // std::cout << "Done printing" << std::endl;
 #endif
 
 
