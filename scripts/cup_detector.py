@@ -6,7 +6,9 @@ import numpy as np
 from std_msgs.msg import String
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
+
 bridge = CvBridge()
+
 def hue_mask(img, minHue, maxHue, minSaturation, maxSaturation, minValue, maxValue):
     """Create a binary image based on the desired HSV range
 
@@ -101,6 +103,50 @@ def img_callback(data):
     cv2.imshow("Processed Image Window", result)
     cv2.waitKey(3)
 
+def pixel_to_local3d(px, py, r, proj_mat):
+    """
+    Params:
+        px, py:   raw pixel coords (ints)
+        r:        distance in straight line to px, py
+        proj_mat: 3x3 numpy array of camera matrix
+
+    Return:
+        3x1 np matrix: x, y, z (camera local 3d coordinates)
+    """
+    x = (px - proj_mat[0,2]) / proj_mat[0, 0]
+    y = (py - proj_mat[1,2]) / proj_mat[1, 1]
+    z = r * sqrt(1/(x ** 2 + y ** 2))
+    return np.array([x, y, z])
+
+def rotate_z(theta):
+    """
+    Return:
+        Rotation of an angle `theta` about the z axis
+    """
+
+    return np.array([ [cos(theta), -sin(theta), 0],
+                      [sin(theta),  cos(theta), 0],
+                      [0,           0,          1]])
+
+def local3d_to_global(local,  theta1):
+    """
+    Params:
+        local:      local coords returned by pixel_to_local3d
+        theta1:     Rotation of first angle - the yaw of the arm
+
+    Return:
+        3x1 np matrix: global x, y, z
+    """
+    # 3x1 np matrix of offset of camera to global frame
+    cam_offset = [0, 0, 0] # TODO
+
+    # Global x direction is local z (i.e. planar distance from camera)
+    # Global y is local x (left/right in camera frame)
+    # Global z is local y (up/down in camera frame)
+    permuted = np.array( [local[2], local[0], local[1]] )
+
+    # TODO: plus or minus cam offset? Depends on how defined
+    return np.dot(rotate_z(theta1), (permuted - cam_offset))
 
 def main():
     try:
