@@ -1,0 +1,3 @@
+<launch>
+  <node name ="cup_detector_node" pkg="bar-bot" type="cup_detector.py" output="screen" required="true"/>
+</launch>

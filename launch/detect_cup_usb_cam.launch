@@ -7,5 +7,5 @@
     <param name="camera_frame_id" value="cam" />
     <param name="io_method" value="mmap"/>
   </node>
-  <node name ="cup_detector_node" pkg="cup_detector" type="cup_detector.py" output="screen" required="true"/>
+  <node name ="cup_detector_node" pkg="bar-bot" type="cup_detector.py" output="screen" required="true"/>
 </launch>

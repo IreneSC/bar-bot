@@ -7,6 +7,8 @@ from std_msgs.msg import String
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
 bridge = CvBridge()
+image_pub = None
+
 def hue_mask(img, minHue, maxHue, minSaturation, maxSaturation, minValue, maxValue):
     """Create a binary image based on the desired HSV range
 
@@ -56,11 +58,10 @@ def hue_mask(img, minHue, maxHue, minSaturation, maxSaturation, minValue, maxVal
     return result
 
 def process_image(img):
-    binary = hue_mask(img, 35, 40, 35, 165, 15, 165)
+    binary = hue_mask(img, 30, 55, 20, 170, 20, 175)
     kernel = np.ones((3,3),np.uint8)
-    binary = cv2.dilate(binary,kernel,iterations = 3)
-    binary = cv2.erode(binary,kernel,iterations = 3)
-    binary = cv2.dilate(binary,kernel,iterations = 3)
+    binary = cv2.erode(binary,kernel,iterations = 5)
+    binary = cv2.dilate(binary,kernel,iterations = 5)
     _, contours, hierarchy = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     return binary, contours
 
@@ -81,9 +82,7 @@ def find_max_contour(contours):
     max_contour = cv2.approxPolyDP(max_contour,epsilon,True)
     area = cv2.contourArea(max_contour)
     if area < 600:
-        print("too smol :(((")
         return []
-    print("big boi")
     return max_contour
 
 def img_callback(data):
@@ -97,15 +96,20 @@ def img_callback(data):
     if not(max_contour ==[]):
         cv2.drawContours(result, [max_contour], -1, (0,255,0), 2)
     cv2.drawContours(result, contours, -1, (255,0,0), 2)
-    cv2.imshow("Image window", cv_image)
-    cv2.imshow("Processed Image Window", result)
-    cv2.waitKey(3)
+    global image_pub
+    try:
+        image_pub.publish(bridge.cv2_to_imgmsg(result,"bgr8"))
+    except CvBridgeError as e:
+        print(e)
+
 
 
 def main():
     try:
         rospy.init_node("cup_boi")
-        image_sub = rospy.Subscriber("/cam/image_raw", Image, img_callback)
+        global image_pub
+        image_pub = rospy.Publisher('processed_image', Image, queue_size=10)
+        image_sub = rospy.Subscriber("/camera/color/image_raw", Image, img_callback)
         while not rospy.is_shutdown():
             rospy.spin()
     except KeyboardInterrupt:
