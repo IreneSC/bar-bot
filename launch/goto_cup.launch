@@ -1,0 +1,34 @@
+<launch>
+  <!-- Camera --> 
+  <node name="cam" pkg="usb_cam" type="usb_cam_node" output="screen" >
+    <param name="video_device"    value="/dev/video1" />
+    <param name="image_width"     value="800" />
+    <param name="image_height"    value="600" />
+    <param name="pixel_format"    value="yuyv" />
+    <param name="camera_frame_id" value="cam" />
+    <param name="io_method"       value="mmap"/>
+  </node>
+  <node name="cup_detector_node"    pkg="cup_detector" type="cup_detector.py" output="screen" required="true"/>
+  <node name="rgb_undistorion"      pkg="image_proc"   type="image_proc"
+    image:="camera/image_raw"/>
+  <node name="depth_undistorion"    pkg="image_proc"   type="image_proc"
+    image:="camera/aligned_depth_to_color/image_raw"/>
+
+  <!-- Hebi interaction/kinematics -->
+  <node name="hebiros_node" pkg="hebiros" type="hebiros_node" respawn="false" output="screen"/>
+  <node name="kinematics" pkg="bar-bot" type="kinematics_node">
+    <remap from="camera/image_raw/image_rect_color" to="rgb_camera/image_raw"/>
+    <remap from="camera/aligned_depth_to_color/image_raw/image_rect_color" to="depth_camera/image_raw"/>
+  </node>
+
+  <!-- Generic ROS/Visualization stuff -->
+  <param name="robot_description" textfile="$(find bar-bot)/urdf/basic_arm.urdf"/>
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(find bar-bot)/rviz/viewrobot.rviz"/>
+  <node name="rsp" pkg="robot_state_publisher" type="robot_state_publisher">
+    <param name="ignore_timestamp" value="true"/>
+  </node>
+
+  <!-- <node name="jsp" pkg="joint_state_publisher" type="joint_state_publisher"> -->
+  <!--   <param name="use_gui" value="true"/> -->
+  <!-- </node> -->
+</launch>

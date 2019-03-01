@@ -86,7 +86,7 @@ def find_max_contour(contours):
         return []
     return max_contour
 
-def img_callback(data):
+def rgb_img_callback(data):
     try:
         cv_image = bridge.imgmsg_to_cv2(data, "bgr8")
     except CvBridgeError as e:
@@ -154,7 +154,7 @@ def main():
         rospy.init_node("cup_boi")
         global image_pub
         image_pub = rospy.Publisher('processed_image', Image, queue_size=10)
-        image_sub = rospy.Subscriber("/camera/color/image_raw", Image, img_callback)
+        image_sub = rospy.Subscriber("/camera/color/image_raw", Image, rgb_img_callback)
         while not rospy.is_shutdown():
             rospy.spin()
     except KeyboardInterrupt:
