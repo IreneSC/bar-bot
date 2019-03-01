@@ -21,6 +21,18 @@ HebiHelper::HebiHelper(ros::NodeHandle n,
     command_publisher= n.advertise<sensor_msgs::JointState>
         ("/hebiros/"+group_name+"/command/joint_state", 100);
 
+    // Read in gripper topic name
+    std::string target_gripper_state_topic;
+    if (!n.getParam("target_gripper_state_topic", target_gripper_state_topic))
+    {
+      ROS_ERROR("target_gripper_state_topic param not specified");
+      return;
+    }
+
+    // Create a subscriber to recieve command to manipulate gripper
+    gripper_subscriber = n.subscribe(target_gripper_state_topic,
+            100, &HebiHelper::gripperCallback,this);
+
     // command_msg.name = names;
     // command_msg.position.resize(names.size());
     // command_msg.velocity.resize(names.size());
@@ -73,6 +85,11 @@ void HebiHelper::feedbackCallback(const sensor_msgs::JointState::ConstPtr& data)
     // feedbackvalid = 1;
 }
 
+void HebiHelper::gripperCallback(const std_msgs::Boolean& data)
+{
+    gripper_open = *data;
+}
+
 
 /*
  **   Goal Subscriber Callback
@@ -100,6 +117,12 @@ void HebiHelper::goToJointState(sensor_msgs::JointState joints)
     joints.position[2] = -joints.position[2];
     joints.position[3] = joints.position[3];
 #endif
+    if (gripper_open) {
+	    joints.position[5] = gripbound[0];
+    } else {
+        joints.position[5] = gripbound[1];
+    }
+
     joints.name = names;
     command_publisher.publish(joints);
 }

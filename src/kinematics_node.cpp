@@ -24,6 +24,9 @@ static double  a[num_joints], b[num_joints], c[num_joints], d[num_joints];
 // Max speeds.
 static double  qdotmax[num_joints] = {.05, .05, .05, .05, .05};
 
+// Gripper boundaries, {min, max}
+static double gripbound[2] = {0, -1.0};
+
 ros::Publisher joint_state_publisher;
 
 void initTrajectory(const sensor_msgs::JointState& target_joints) {
