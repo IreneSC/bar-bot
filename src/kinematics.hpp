@@ -7,10 +7,10 @@
 
 static const std::vector<std::string> joint_names = {"z_rotate", "pitch_1", "pitch_2", "pitch_3", "yaw"};
 
-static constexpr double d1 = .105;
-static constexpr double d2 = .38;
-static constexpr double d3 = .38;
-static constexpr double d4 = .11;
+static constexpr double d1 = .11;
+static constexpr double d2 = .463;
+static constexpr double d3 = .463;
+static constexpr double d4 = .108;
 constexpr int num_joints = 5;
 
 
