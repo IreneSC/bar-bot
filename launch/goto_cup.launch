@@ -1,24 +1,18 @@
 <launch>
-  <!-- Camera --> 
-  <node name="cam" pkg="usb_cam" type="usb_cam_node" output="screen" >
-    <param name="video_device"    value="/dev/video1" />
-    <param name="image_width"     value="800" />
-    <param name="image_height"    value="600" />
-    <param name="pixel_format"    value="yuyv" />
-    <param name="camera_frame_id" value="cam" />
-    <param name="io_method"       value="mmap"/>
-  </node>
-  <node name="cup_detector_node"    pkg="cup_detector" type="cup_detector.py" output="screen" required="true"/>
-  <node name="rgb_undistorion"      pkg="image_proc"   type="image_proc"
-    image:="camera/image_raw"/>
-  <node name="depth_undistorion"    pkg="image_proc"   type="image_proc"
-    image:="camera/aligned_depth_to_color/image_raw"/>
+    <param name="img_proc_bgr_topic" type="string" value="camera/image_raw/image_rect_color" />
+    <param name="img_proc_depth_topic" type="string" value="camera/aligned_depth_to_color/image_raw/image_rect_color" />
+    <param name="processed_image_topic" type="string" value="bar-bot/processed" />
+    <param name="cup_detection_topic" type="string" value="bar-bot/cup_detections" />
+    <param name="target_joint_state_topic" type="string" value="bar-bot/target_joint_state" />
+    <param name="target_gripper_state_topic" type="string" value="bar-bot/target_gripper_state" />
+
+  <!-- Camera -->
+  <include file="$(find realsense2_camera)/launch/rs_camera.launch"/>
+  <node name ="cup_detector_node" pkg="bar-bot" type="cup_detector.py" output="screen" required="true"/>
 
   <!-- Hebi interaction/kinematics -->
   <node name="hebiros_node" pkg="hebiros" type="hebiros_node" respawn="false" output="screen"/>
   <node name="kinematics" pkg="bar-bot" type="kinematics_node">
-    <remap from="camera/image_raw/image_rect_color" to="rgb_camera/image_raw"/>
-    <remap from="camera/aligned_depth_to_color/image_raw/image_rect_color" to="depth_camera/image_raw"/>
   </node>
 
   <!-- Generic ROS/Visualization stuff -->
