@@ -142,6 +142,7 @@ include_directories(
 add_executable(face_tracker_node src/face_tracker_node.cpp)
 add_executable(grabber_node src/grabber_node.cpp src/HebiHelper.cpp)
 add_executable(kinematics_node src/kinematics_node.cpp src/kinematics.cpp src/HebiHelper.cpp)
+add_executable(commander_node src/cup_commander.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -154,6 +155,7 @@ add_executable(kinematics_node src/kinematics_node.cpp src/kinematics.cpp src/He
 add_dependencies(face_tracker_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(kinematics_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(grabber_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(commander_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(face_tracker_node
@@ -166,6 +168,10 @@ target_link_libraries(kinematics_node
 target_link_libraries(grabber_node
   ${catkin_LIBRARIES}
 )
+target_link_libraries(commander_node
+  ${catkin_LIBRARIES}
+)
+
 
 #############
 ## Install ##

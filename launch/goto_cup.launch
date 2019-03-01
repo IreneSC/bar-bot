@@ -1,11 +1,11 @@
 <launch>
     <param name="img_proc_bgr_topic" type="string" value="camera/image_raw/image_rect_color" />
     <param name="img_proc_depth_topic" type="string" value="camera/aligned_depth_to_color/image_raw/image_rect_color" />
-    <param name="processed_image_topic" type="string" value="bar-bot/processed" />
-    <param name="cup_detection_topic" type="string" value="bar-bot/cup_detections" />
-    <param name="target_joint_state_topic" type="string" value="bar-bot/target_joint_state" />
-    <param name="target_gripper_state_topic" type="string" value="bar-bot/target_gripper_state" />
-    <param name="current_pose_topic" type="string" value="bar-bot/current_pose" />
+    <param name="processed_image_topic" type="string" value="barbot/processed" />
+    <param name="cup_detection_topic" type="string" value="barbot/cup_detections" />
+    <param name="target_position_topic" type="string" value="barbot/target_position" />
+    <param name="target_gripper_state_topic" type="string" value="barbot/target_gripper_state" />
+    <param name="current_pose_topic" type="string" value="barbot/current_pose" />
 
   <!-- Camera -->
   <include file="$(find realsense2_camera)/launch/rs_camera.launch"/>
