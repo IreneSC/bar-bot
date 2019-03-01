@@ -115,7 +115,7 @@ def pixel_to_local3d(px, py, r, proj_mat):
     """
     x = (px - proj_mat[0,2]) / proj_mat[0, 0]
     y = (py - proj_mat[1,2]) / proj_mat[1, 1]
-    z = r * sqrt(1/(x ** 2 + y ** 2))
+    z = r * sqrt(1/(x ** 2 + y ** 2 + 1))
     return np.array([x, y, z])
 
 def rotate_z(theta):
