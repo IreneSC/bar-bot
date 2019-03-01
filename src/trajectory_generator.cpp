@@ -30,7 +30,7 @@ static double  qdot[5];
 static double  a[5], b[5], c[5], d[5];
 
 // Max speeds.
-static double  qdotmax[5] = {3.14, 3.14, 3.14, 3.14, 3.14};
+static double  qdotmax[5] = {.14, .14, .14, .14, .14};
 
 
 /*

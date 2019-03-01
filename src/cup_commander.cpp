@@ -93,9 +93,14 @@ int main(int argc, char **argv) {
         double goal_theta = atan2(last_arm_pos.point.y , last_arm_pos.point.x);
         //scan for cup
         if ((ros::Time::now() - last_cup_detection) <= detection_expiration) {
-            if (count++ % 100 == 0)
-                target_position_publisher.publish(last_cup_pos);
+            if (count++ % 100 == 0) {
+                auto temp = last_cup_pos;
+                temp.point.z += .4; /* Go to above the cup */
+                target_position_publisher.publish(temp);
+            }
         }
+        if (count > 2000)
+            break;
         loop_rate.sleep();
         ros::spinOnce();
         // while ((ros::Time::now() - last_cup_detection) > detection_expiration){
@@ -125,6 +130,15 @@ int main(int argc, char **argv) {
         // ros::spinOnce();
       }
 
+    count = 0;
+    while(ros::ok()){
+        last_cup_pos.point.z = .06;
+        target_position_publisher.publish(last_cup_pos);
+        if (++count % 500 == 0) {
+            target_gripper_state_publisher.publish(false);
+        }
+        loop_rate.sleep();
+    }
     ros::shutdown();
 
     return 0;

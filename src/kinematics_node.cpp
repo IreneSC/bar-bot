@@ -25,7 +25,7 @@ static double  qdot[num_joints];
 static double  a[num_joints], b[num_joints], c[num_joints], d[num_joints];
 
 // Max speeds.
-static double  qdotmax[num_joints] = {.05, .05, .05, .05, .05};
+static double  qdotmax[num_joints] = {.8, .8, .8, 1, .8};
 
 static double default_pos[num_joints] = {0, 0.785, -1.57, -0.785, 0};
 
@@ -41,7 +41,7 @@ void initTrajectory(const sensor_msgs::JointState& target_joints) {
 
     // Pick a move time.  Note this is approximate.  We could compute
     // the absolute fastest time or pass as an argument.
-    tmove = 0.25;
+    tmove = .25;
     for (i = 0 ; i < num_joints ; i++)
     {
         tmp = 2.0 * fabs(qfinal[i] - q[i]) / qdotmax[i];
@@ -97,6 +97,7 @@ void processFeedback(const sensor_msgs::JointState& joints) {
 void followTrajectory() {
     sensor_msgs::JointState cmdMsg;
     cmdMsg.position.resize(num_joints);
+<<<<<<< HEAD
 
     // cmdMsg.velocity.resize(num_joints);
 
@@ -117,6 +118,12 @@ void followTrajectory() {
         triang_amp *= -1;
     }
 
+//     cmdMsg.velocity.resize(num_joints);
+
+//     // Advance time, but hold at t=0 to stay at the final position.
+//     double t = (ros::Time::now() - prev_time).toSec() - t_f;
+//     if (t > 0.0)
+//         t = 0.0;
 
     // Compute the new position and velocity commands.
     for (int i = 0 ; i < num_joints ; i++)
@@ -133,7 +140,7 @@ void followTrajectory() {
         //qdot[i] = b[i]+t*(2.0*c[i]+t*3.0*d[i]);
 
         cmdMsg.position[i] = q[i];
-        // cmdMsg.velocity[i] = qdot[i];
+        cmdMsg.velocity[i] = qdot[i];
     }
 
     // Publish.
