@@ -2,6 +2,9 @@
 
 #define FLIP_PITCHES
 
+// Gripper boundaries, {min, max}
+static double gripbound[2] = {0, -1.0};
+
 HebiHelper::HebiHelper(ros::NodeHandle n,
         const std::string& group_name,
         const std::vector<std::string>& names,
@@ -85,9 +88,9 @@ void HebiHelper::feedbackCallback(const sensor_msgs::JointState::ConstPtr& data)
     // feedbackvalid = 1;
 }
 
-void HebiHelper::gripperCallback(const std_msgs::Boolean& data)
+void HebiHelper::gripperCallback(const std_msgs::Bool::ConstPtr& msg)
 {
-    gripper_open = *data;
+    gripper_open = msg->data;
 }
 
 
@@ -108,7 +111,6 @@ void HebiHelper::gripperCallback(const std_msgs::Boolean& data)
 //     valid = msg->data;
 // }
 
-
 // NOTE: This method copies, and thus does not modify, its argument
 void HebiHelper::goToJointState(sensor_msgs::JointState joints)
 {
@@ -118,7 +120,7 @@ void HebiHelper::goToJointState(sensor_msgs::JointState joints)
     joints.position[3] = joints.position[3];
 #endif
     if (gripper_open) {
-	    joints.position[5] = gripbound[0];
+        joints.position[5] = gripbound[0];
     } else {
         joints.position[5] = gripbound[1];
     }

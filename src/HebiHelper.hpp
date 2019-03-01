@@ -15,7 +15,7 @@ class HebiHelper{
 private:
     // ros::NodeHandle n;
     sensor_msgs::JointState feedback;       // The actuator feedback struccture
-    boolean gripper_open;                   // Gripper state
+    bool gripper_open;                   // Gripper state
     // volatile int            feedbackvalid = 0;
     // volatile double         goalpos;        // The goal position
     // volatile int            valid;
@@ -35,7 +35,7 @@ private:
 
     void setupGroup(ros::NodeHandle n);
     void feedbackCallback(const sensor_msgs::JointState::ConstPtr& data);
-    void HebiHelper::gripperCallback(const std_msgs::Boolean& data);
+    void gripperCallback(const std_msgs::Bool::ConstPtr& msg);
     // void goalCallback(const std_msgs::Float64::ConstPtr& msg);
     // void validCallback(const std_msgs::Bool::ConstPtr& msg);
 
