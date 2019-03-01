@@ -5,6 +5,7 @@
     <param name="cup_detection_topic" type="string" value="bar-bot/cup_detections" />
     <param name="target_joint_state_topic" type="string" value="bar-bot/target_joint_state" />
     <param name="target_gripper_state_topic" type="string" value="bar-bot/target_gripper_state" />
+    <param name="current_pose_topic" type="string" value="bar-bot/current_pose" />
 
   <!-- Camera -->
   <include file="$(find realsense2_camera)/launch/rs_camera.launch"/>
