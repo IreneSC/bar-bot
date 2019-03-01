@@ -2,7 +2,7 @@
 #define FORWARD_KINEMATICS_HPP
 #include <eigen3/Eigen/Geometry>
 #include "ros/ros.h"
-#include "geometry_msgs/PoseStamped.h"
+#include "geometry_msgs/PointStamped.h"
 #include "sensor_msgs/JointState.h"
 
 static const std::vector<std::string> joint_names = {"z_rotate", "pitch_1", "pitch_2", "pitch_3", "yaw"};

@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import sys
+import math
 import rospy
 import cv2
 import numpy as np
@@ -8,8 +9,8 @@ import pyrealsense2 as rs
 
 # Ros pub/sub
 from std_msgs.msg import String
-from geometry_msgs.msg import PointStamped
-# from sensor_msgs.msg import Image
+from geometry_msgs.msg import PointStamped, PoseStamped
+from sensor_msgs.msg import Image, JointState
 from cv_bridge import CvBridge, CvBridgeError
 # import message_filters
 
@@ -17,7 +18,7 @@ from cv_bridge import CvBridge, CvBridgeError
 bridge = CvBridge()
 image_pub = None
 position_pub = None
-
+joint_state_feedback_sub = None
 # Create a pipeline
 pipeline = rs.pipeline()
 align = None  # Used to align the depth and color images
@@ -128,7 +129,7 @@ def find_max_contour(contours):
 #         image_ready = True
 
 
-def process_images()
+def process_images():
     """
     Process the latest images, waiting for new ones to become available if necessary.
     Publishes the new estimate of the global position.
@@ -145,7 +146,9 @@ def process_images()
     #     print(e)
 
     # Get frameset of color and depth
+    # print("waiting for frames")
     frames = pipeline.wait_for_frames()
+    # print("got frames")
     # frames.get_depth_frame() is a 640x360 depth image
 
     # Align the depth frame to color frame
@@ -153,10 +156,12 @@ def process_images()
 
     # Get aligned frames
     aligned_depth_frame = aligned_frames.get_depth_frame() # aligned_depth_frame is a depth image
+    depth_intrin = aligned_depth_frame.profile.as_video_stream_profile().intrinsics
     color_frame = aligned_frames.get_color_frame()
 
     # Validate that both frames are valid
     if not aligned_depth_frame or not color_frame:
+        print ("one was none")
         return
 
     depth_image = np.asanyarray(aligned_depth_frame.get_data())
@@ -186,7 +191,7 @@ def process_images()
     # Find the global coords of the cup
     if not max_contour == []:
         cx, cy = get_contour_centroid(max_contour)
-        local = pixel_to_local3d(cx, cy, aligned_depth_frame)
+        local = pixel_to_local3d(cx, cy, aligned_depth_frame, depth_intrin)
         world = local3d_to_global(local)
 
         # Publish the coordinates
@@ -207,7 +212,7 @@ def get_contour_centroid(contour):
     return (cx, cy)
 
 
-def pixel_to_local3d(px, py, depth_frame):
+def pixel_to_local3d(px, py, depth_frame, depth_intrin):
 # def pixel_to_local3d(px, py, r, proj_mat):
     """
     Params:
@@ -219,7 +224,10 @@ def pixel_to_local3d(px, py, depth_frame):
     Return:
         3x1 np matrix: x, y, z (camera local 3d coordinates)
     """
-    return depth_frame.get_distance(px, py)
+    depth = depth_frame.get_distance(px, py)
+    depth_point = rs.rs2_deproject_pixel_to_point(
+                                depth_intrin, [px, py], depth)
+    return depth_point
     # x = (px - proj_mat[0,2]) / proj_mat[0, 0]
     # y = (py - proj_mat[1,2]) / proj_mat[1, 1]
     # z = r * sqrt(1/(x ** 2 + y ** 2 + 1))
@@ -232,8 +240,8 @@ def rotate_z(theta):
         Rotation of an angle `theta` about the z axis
     """
 
-    return np.array([ [cos(theta), -sin(theta), 0],
-                      [sin(theta),  cos(theta), 0],
+    return np.array([ [math.cos(theta), -math.sin(theta), 0],
+                      [math.sin(theta),  math.cos(theta), 0],
                       [0,           0,          1]])
 
 
@@ -248,15 +256,19 @@ def local3d_to_global(local):
     """
     global theta1
     # 3x1 np matrix of offset of camera to global frame
-    cam_offset = [0, 0, 0] # TODO
+    cam_offset = [.1, .08, 0.07]
 
     # Global x direction is local z (i.e. planar distance from camera)
     # Global y is local x (left/right in camera frame)
     # Global z is local y (up/down in camera frame)
-    permuted = np.array( [local[2], local[0], local[1]] )
+    permuted = np.array( [local[0], local[2], -local[1]] )
 
     # TODO: plus or minus cam offset? Depends on how defined
-    return np.dot(rotate_z(theta1), (permuted - cam_offset))
+    ret = np.dot(rotate_z(theta1), (permuted + cam_offset))
+    # Minimum height of .05
+    ret[2] = max(0.15, ret[2])
+    return ret
+    # return permuted
 
 
 def init_realsense():
@@ -265,6 +277,7 @@ def init_realsense():
     # Create a config and configure the pipeline to stream
     #  the same resolutions of color and depth streams
     # TODO: bump up resolution?
+    print("start init")
     config = rs.config()
     config.enable_stream(rs.stream.depth, 640, 360, rs.format.z16, 30)
     config.enable_stream(rs.stream.color, 640, 360, rs.format.bgr8, 30)
@@ -283,7 +296,12 @@ def init_realsense():
     align_to = rs.stream.color
     global align
     align = rs.align(align_to)
+    print("done init")
 
+def joint_state_feedback_callback(joint_state):
+    global theta1
+    theta1 = joint_state.position[0]
+    print(theta1)
 
 def main():
     try:
@@ -305,12 +323,14 @@ def main():
         global position_pub
         position_pub = rospy.Publisher(
                 rospy.get_param("cup_detection_topic"), PointStamped, queue_size=10)
+        global joint_state_feedback_sub
+        joint_state_feedback_sub = rospy.Subscriber("/hebiros/all/feedback/joint_state", JointState, joint_state_feedback_callback)
 
         init_realsense()
 
         while not rospy.is_shutdown():
             process_images()
-            rospy.spin()
+            # rospy.spinOnce()
 
     except KeyboardInterrupt:
         print("Shutting down")

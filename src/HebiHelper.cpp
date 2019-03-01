@@ -119,12 +119,14 @@ void HebiHelper::goToJointState(sensor_msgs::JointState joints)
     joints.position[2] = -joints.position[2];
     joints.position[3] = joints.position[3];
 #endif
+    ROS_INFO("Joint size: %d", joints.position.size());
     if (gripper_open) {
-        joints.position[5] = gripbound[0];
+        joints.position.push_back(gripbound[0]);
     } else {
-        joints.position[5] = gripbound[1];
+        joints.position.push_back(gripbound[1]);
     }
 
     joints.name = names;
     command_publisher.publish(joints);
+    ROS_INFO("After publish");
 }

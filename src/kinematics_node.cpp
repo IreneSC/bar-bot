@@ -1,12 +1,15 @@
 #include "ros/ros.h"
+#include "geometry_msgs/PointStamped.h"
 #include "geometry_msgs/PoseStamped.h"
 #include "sensor_msgs/JointState.h"
 #include "kinematics.hpp"
 #include "tf/transform_datatypes.h"
 #include "HebiHelper.hpp"
 
-static const std::string target_subscriber_name("/gripper_position");
-static const std::string joint_state_name("/joint_states");
+static std::string target_subscriber_name;
+static const std::string joint_state_name("/joint_state");
+static const std::string joint_state_feedback_name("/hebiros/all/feedback/joint_state");
+static std::string current_pose_topic_name;
 
 static const std::vector<std::string> families = {"Arm", "Arm", "Arm", "Arm", "Arm", "Arm"};
 static const std::vector<std::string> names  = {"base", "pitch_1", "pitch_2", "pitch_3", "wrist", "gripper"};
@@ -25,6 +28,7 @@ static double  a[num_joints], b[num_joints], c[num_joints], d[num_joints];
 static double  qdotmax[num_joints] = {.05, .05, .05, .05, .05};
 
 ros::Publisher joint_state_publisher;
+ros::Publisher fkin_pub;
 
 void initTrajectory(const sensor_msgs::JointState& target_joints) {
     prev_time = ros::Time::now();
@@ -56,10 +60,10 @@ void initTrajectory(const sensor_msgs::JointState& target_joints) {
     t_f = tmove;
 }
 
-void processTargetState(const geometry_msgs::PoseStamped& target_pose) {
-    const geometry_msgs::Point&      target_loc = target_pose.pose.position;
-    const geometry_msgs::Quaternion& target_ori = target_pose.pose.orientation;
-    sensor_msgs::JointState angles = positionToJointAngles(target_loc);
+void processTargetState(const geometry_msgs::PointStamped& target_loc) {
+    // const geometry_msgs::Point&      target_loc = target_pose.pose.position;
+    // const geometry_msgs::Quaternion& target_ori = target_pose.pose.orientation;
+    sensor_msgs::JointState angles = positionToJointAngles(target_loc.point);
     initTrajectory(angles);
 
     angles.header.stamp = ros::Time::now();
@@ -80,11 +84,18 @@ void processTargetState(const geometry_msgs::PoseStamped& target_pose) {
     std::cout << "Published: " << angles << std::endl;
 }
 
+void processFeedback(const sensor_msgs::JointState& joints) {
+    geometry_msgs::Point pt = jointAnglesToPosition(joints);
+    geometry_msgs::PoseStamped pose;
+    pose.pose.position = pt;
+    pose.header.stamp = ros::Time::now();
+    fkin_pub.publish(pose);
+}
 
 void followTrajectory() {
     sensor_msgs::JointState cmdMsg;
     cmdMsg.position.resize(num_joints);
-    cmdMsg.velocity.resize(num_joints);
+    // cmdMsg.velocity.resize(num_joints);
 
     // Advance time, but hold at t=0 to stay at the final position.
     double t = t_f - (ros::Time::now() - prev_time).toSec();
@@ -98,7 +109,7 @@ void followTrajectory() {
         qdot[i] = b[i]+t*(2.0*c[i]+t*3.0*d[i]);
 
         cmdMsg.position[i] = q[i];
-        cmdMsg.velocity[i] = qdot[i];
+        // cmdMsg.velocity[i] = qdot[i];
     }
 
     // Publish.
@@ -131,12 +142,34 @@ int main(int argc, char **argv) {
     joint_state_publisher =
         node_handler.advertise<sensor_msgs::JointState>(joint_state_name, 1);
 
+    if (!node_handler.getParam("target_position_topic", target_subscriber_name))
+    {
+      ROS_ERROR("target_gripper_state_topic param not specified");
+      return -1;
+    }
+
+
+    if (!node_handler.getParam("current_pose_topic", current_pose_topic_name))
+    {
+      ROS_ERROR("target_gripper_state_topic param not specified");
+      return -1;
+    }
+
     ros::Subscriber target_subscriber =
         node_handler.subscribe(target_subscriber_name, 10,
                               &processTargetState);
 
+    ros::Subscriber feedback_subscriber =
+        node_handler.subscribe(joint_state_feedback_name, 10,
+                              &processFeedback);
+
+    fkin_pub = node_handler.advertise<geometry_msgs::PoseStamped>(
+            current_pose_topic_name, 10, &processFeedback);
+
     HebiHelper helper(node_handler, "all", names, families);
     helper_p = &helper;
+
+    ROS_INFO("About to loop");
 
 #define TEST_ANGLE
 
