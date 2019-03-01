@@ -7,12 +7,19 @@ import numpy as np
 from threading import Lock
 import pyrealsense2 as rs
 
+ISCV3 = cv2.__version__[0]=="3"
+
+
 # Ros pub/sub
 from std_msgs.msg import String
 from geometry_msgs.msg import PointStamped, PoseStamped
 from sensor_msgs.msg import Image, JointState
 from cv_bridge import CvBridge, CvBridgeError
 # import message_filters
+
+MIN_CONTOUR_AREA = 500
+NUM_RECT_POINTS=20
+SHAPE_RET_THRESHOLD=12
 
 # Pub/sub global variables
 bridge = CvBridge()
@@ -26,11 +33,21 @@ align = None  # Used to align the depth and color images
 # the current yaw of the arm in radians
 theta1 = 0
 
+
 # bgr and depth camera global variables
 # image_ready = False
 # image_bgr = None
 # image_depth = None
 # image_lock = Lock()
+
+def compare_rectangle(cnt, rect_cnt):
+    square_error=0.0
+    for pt in cnt[0::NUM_RECT_POINTS]:
+        square_error += (cv2.pointPolygonTest(rect_cnt,tuple(pt[0]),True))**2
+    for pt in rect_cnt:
+        square_error += (cv2.pointPolygonTest(cnt,tuple(pt),True))**2
+    return math.sqrt(square_error)
+
 
 def hue_mask(img, minHue, maxHue, minSaturation, maxSaturation, minValue, maxValue):
     """Create a binary image based on the desired HSV range
@@ -82,39 +99,41 @@ def hue_mask(img, minHue, maxHue, minSaturation, maxSaturation, minValue, maxVal
 
 
 def process_image(img):
-    binary = hue_mask(img, 30, 55, 20, 170, 20, 175)
+    binary = hue_mask(img, 30, 55, 20, 160, 20, 160)
     kernel = np.ones((3,3),np.uint8)
-    binary = cv2.erode(binary,kernel,iterations = 5)
-    binary = cv2.dilate(binary,kernel,iterations = 5)
+    binary = cv2.erode(binary,kernel,iterations = 3)
+    binary = cv2.dilate(binary,kernel,iterations = 3)
     _, contours, hierarchy = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     return binary, contours
 
+def find_cups(img):
+    binary, contours = process_image(img)
+    result = cv2.cvtColor(binary, cv2.COLOR_GRAY2BGR)
+    cv2.drawContours(result,contours,0,(255,0,0),2)
+    rectangles = []
+    for contour in contours:
+        if cv2.contourArea(contour) < MIN_CONTOUR_AREA:
+            continue
+        rect = cv2.minAreaRect(contour)
+        if ISCV3:
+            rect_cnt = np.int0(cv2.boxPoints(rect))
+        else:
+            rect_cnt =np.int0(cv2.cv.BoxPoints(rect))
 
-def find_max_contour(contours):
-    """
-    Return the largest contour in the vector of contours by area, as long
-    as that largest contour has a sufficiently large area.
-    Return [] if no contour is sufficiently large.
-    """
-    if len(contours)==0:
-        return []
-    max_contour_area = cv2.contourArea(contours[0])
-    max_contour = contours[0]
-    max_index = 0
-    for i, cnt in enumerate(contours):
-        area = cv2.contourArea(cnt)
-        if area>max_contour_area:
-            max_contour=cnt
-            max_contour_area=area
-            max_index = i
-    epsilon = 0.02*cv2.arcLength(max_contour,True)
-    max_contour = cv2.approxPolyDP(max_contour,epsilon,True)
-    area = cv2.contourArea(max_contour)
-    if area < 600:
-        return []
-    return max_contour
-
-
+        error = compare_rectangle(contour, rect_cnt)
+        if error < SHAPE_RET_THRESHOLD:
+            rectangles.append(rect_cnt)
+            if ISCV3:
+                cv2.putText(result, str(error), rect_cnt[0], cv2.FONT_HERSHEY_SIMPLEX, 1, (255,255,255), 5, cv2.LINE_AA)
+            else:
+                cv2.putText(result, str(error), rect_cnt[0], cv2.FONT_HERSHEY_SIMPLEX, 1, (255,255,255), 5, cv2.CV_AA)
+        else:
+            if ISCV3:
+                cv2.putText(result, str(error), rect_cnt[0], cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,255), 5, cv2.LINE_AA)
+            else:
+                cv2.putText(result, str(error), rect_cnt[0], cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,255), 5, cv2.CV_AA)
+        cv2.drawContours(result,rectangles,0,(0,255,0),2)
+    return result, rectangles
 # def image_callback(bgr, depth):
 #     """
 #     Takes the associated bgr and depth image, and updates the global variables
@@ -125,7 +144,7 @@ def find_max_contour(contours):
 #         global image_depth
 #         global image_ready
 #         image_bgr = bgr
-#         image_depth = depth
+#         image_depth = deresult = cv2.cvtColor(binary, cv2.COLOR_GRAY2BGR)pth
 #         image_ready = True
 
 
@@ -168,18 +187,8 @@ def process_images():
     color_image = np.asanyarray(color_frame.get_data())
 
     # Finding the cup
-    binary, contours = process_image(color_image)
-    max_contour = find_max_contour(contours);
-
-    # Display the result
-    result = cv2.cvtColor(binary, cv2.COLOR_GRAY2BGR)
-
-    # Draw the cup
-    if not max_contour ==[]:
-        cv2.drawContours(result, [max_contour], -1, (0,255,0), 2)
-
-    # Draw all other contours
-    cv2.drawContours(result, contours, -1, (255,0,0), 2)
+    result, rectangles = find_cups(color_image)
+    max_contour = find_max_contour(rectangles);
 
     # Publish the feedback image
     global image_pub
