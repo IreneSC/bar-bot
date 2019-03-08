@@ -1,4 +1,4 @@
-#include "HebiHelper.hpp"
+#include "hebi_helper.hpp"
 
 #define FLIP_PITCHES
 
@@ -33,8 +33,8 @@ HebiHelper::HebiHelper(ros::NodeHandle n,
     }
 
     // Create a subscriber to recieve command to manipulate gripper
-    gripper_subscriber = n.subscribe(target_gripper_state_topic,
-            100, &HebiHelper::gripperCallback,this);
+    // gripper_subscriber = n.subscribe(target_gripper_state_topic,
+    //         100, &HebiHelper::gripperCallback,this);
 
     // command_msg.name = names;
     // command_msg.position.resize(names.size());
@@ -88,28 +88,19 @@ void HebiHelper::feedbackCallback(const sensor_msgs::JointState::ConstPtr& data)
     // feedbackvalid = 1;
 }
 
-void HebiHelper::gripperCallback(const std_msgs::Bool::ConstPtr& msg)
-{
-    gripper_open = msg->data;
+// Returns previous value
+bool HebiHelper::setGripperClosed(bool is_closed) {
+    bool prev = gripper_closed;
+    gripper_closed = is_closed;
+    return prev;
 }
 
-
-/*
- **   Goal Subscriber Callback
- */
-// void HebiHelper::goalCallback(const std_msgs::Float64::ConstPtr& msg)
-// {
-//     goalpos = msg->data;
-// }
-
-// /*
-//  **   Valid goal Subscriber Callback
-//  */
-// void HebiHelper::validCallback(const std_msgs::Bool::ConstPtr& msg)
-// {
-//     isValidPrev = valid;
-//     valid = msg->data;
-// }
+// Returns previous value
+double HebiHelper::setPourAngle(double angle) {
+    double prev = pour_angle;
+    pour_angle = angle;
+    return prev;
+}
 
 // NOTE: This method copies, and thus does not modify, its argument
 void HebiHelper::goToJointState(sensor_msgs::JointState joints)
@@ -119,8 +110,9 @@ void HebiHelper::goToJointState(sensor_msgs::JointState joints)
     joints.position[2] = -joints.position[2];
     joints.position[3] = joints.position[3];
 #endif
+    joints.position[4] = pour_angle;
     ROS_INFO("Joint size: %d", joints.position.size());
-    if (gripper_open) {
+    if (gripper_closed) {
         joints.position.push_back(gripbound[0]);
     } else {
         joints.position.push_back(gripbound[1]);

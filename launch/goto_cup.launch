@@ -13,7 +13,7 @@
 
     <!-- Hebi interaction/kinematics -->
     <node name="hebiros_node" pkg="hebiros" type="hebiros_node" respawn="false" output="screen"/>
-    <node name="kinematics" pkg="bar-bot" type="kinematics_node" />
+    <node name="mobility" pkg="bar-bot" type="mobility_server" />
 
     <!-- Commander -->
     <node name="commander" pkg="bar-bot" type="commander_node" />

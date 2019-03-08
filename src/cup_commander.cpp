@@ -3,14 +3,16 @@
 #include "geometry_msgs/PoseStamped.h"
 #include "sensor_msgs/JointState.h"
 #include "std_msgs/Bool.h"
+#include "bar_bot/Mobility.h"
 
 static std::string cup_detection_topic;
 static std::string target_position_topic;
 static std::string target_gripper_state_topic;
 static std::string current_pose_topic;
 
-static ros::Publisher target_position_publisher;
-static ros::Publisher target_gripper_state_publisher;
+static ros::ServiceClient mobility_client;
+// static ros::Publisher target_position_publisher;
+// static ros::Publisher target_gripper_state_publisher;
 static ros::Subscriber cup_detection_subscriber;
 static ros::Subscriber current_pose_subscriber;
 
@@ -76,10 +78,12 @@ int main(int argc, char **argv) {
       return -1;
     }
 
-    target_position_publisher
-        = nh.advertise<geometry_msgs::PointStamped>(target_position_topic, 1);
-    target_gripper_state_publisher
-        = nh.advertise<std_msgs::Bool>(target_gripper_state_topic, 1);
+    mobility_client = nh.serviceClient<bar_bot::Mobility>("mobility");
+
+    // target_position_publisher
+    //     = nh.advertise<geometry_msgs::PointStamped>(target_position_topic, 1);
+    // target_gripper_state_publisher
+    //     = nh.advertise<std_msgs::Bool>(target_gripper_state_topic, 1);
 
     cup_detection_subscriber = nh.subscribe(cup_detection_topic, 10,
         &processCupPoint);
@@ -90,19 +94,36 @@ int main(int argc, char **argv) {
     int count = 0;
 
     while(ros::ok()){
-        double goal_theta = atan2(last_arm_pos.point.y , last_arm_pos.point.x);
-        //scan for cup
-        if ((ros::Time::now() - last_cup_detection) <= detection_expiration) {
-            if (count++ % 100 == 0) {
-                auto temp = last_cup_pos;
-                temp.point.z += .4; /* Go to above the cup */
-                target_position_publisher.publish(temp);
-            }
+        bar_bot::Mobility mobility;
+        mobility.request.target_loc         = last_cup_pos.point;
+        mobility.request.pour_angle         = 0;
+        mobility.request.is_blocking        = true;
+        mobility.request.use_trajectory     = true;
+        mobility.request.close_gripper      = false;
+
+        if (mobility_client.call(mobility)) {
+            ROS_INFO("call successful!");
+        } else {
+            ROS_INFO("call failed!");
         }
-        if (count > 2000)
-            break;
-        loop_rate.sleep();
-        ros::spinOnce();
+
+        //scan for cup
+
+        // double goal_theta = atan2(last_arm_pos.point.y , last_arm_pos.point.x);
+        // if ((ros::Time::now() - last_cup_detection) <= detection_expiration) {
+        //     if (count++ % 100 == 0) {
+        //         auto temp = last_cup_pos;
+        //         temp.point.z += .4; /* Go to above the cup */
+        //         target_position_publisher.publish(temp);
+        //     }
+        // }
+        // if (count > 2000)
+        //     break;
+        // loop_rate.sleep();
+        // ros::spinOnce();
+
+
+
         // while ((ros::Time::now() - last_cup_detection) > detection_expiration){
         //     double current_theta = atan2(last_arm_pos.point.y , last_arm_pos.point.x);
         //     if(current_theta > scanning_limit_left){
@@ -130,43 +151,43 @@ int main(int argc, char **argv) {
         // ros::spinOnce();
       }
 
-    count = 0;
-    while(ros::ok()){
-        auto temp = last_cup_pos;
-        temp.point.z = .06;
-        temp.point.x *= .9;
-        temp.point.y *= .9;
-        target_position_publisher.publish(temp);
-        if (++count % 500 == 0) {
-            break;
-        }
-        loop_rate.sleep();
-    }
+    // count = 0;
+    // while(ros::ok()){
+    //     auto temp = last_cup_pos;
+    //     temp.point.z = .06;
+    //     temp.point.x *= .9;
+    //     temp.point.y *= .9;
+    //     target_position_publisher.publish(temp);
+    //     if (++count % 500 == 0) {
+    //         break;
+    //     }
+    //     loop_rate.sleep();
+    // }
 
-    count = 0;
-    while(ros::ok()){
-        auto temp = last_cup_pos;
-        temp.point.z = .06;
-        temp.point.x *= 1.04;
-        temp.point.y *= 1.04;
-        target_position_publisher.publish(temp);
-        if (++count % 500 == 0) {
-            target_gripper_state_publisher.publish(false);
-            break;
-        }
-        loop_rate.sleep();
-    }
+    // count = 0;
+    // while(ros::ok()){
+    //     auto temp = last_cup_pos;
+    //     temp.point.z = .06;
+    //     temp.point.x *= 1.04;
+    //     temp.point.y *= 1.04;
+    //     target_position_publisher.publish(temp);
+    //     if (++count % 500 == 0) {
+    //         target_gripper_state_publisher.publish(false);
+    //         break;
+    //     }
+    //     loop_rate.sleep();
+    // }
 
-    count = 0;
-    while(ros::ok()){
-        auto temp = last_cup_pos;
-        temp.point.z = .4;
-        target_position_publisher.publish(temp);
-        if (++count % 500 == 0) {
-            target_gripper_state_publisher.publish(false);
-        }
-        loop_rate.sleep();
-    }
+    // count = 0;
+    // while(ros::ok()){
+    //     auto temp = last_cup_pos;
+    //     temp.point.z = .4;
+    //     target_position_publisher.publish(temp);
+    //     if (++count % 500 == 0) {
+    //         target_gripper_state_publisher.publish(false);
+    //     }
+    //     loop_rate.sleep();
+    // }
 
     ros::shutdown();
 

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(bar-bot)
+project(bar_bot)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 add_compile_options(-std=c++11 -g -O0)
@@ -19,9 +19,9 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   tf
   cv_bridge
+  message_generation
 )
 
-  # message_generation
 
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
@@ -60,11 +60,10 @@ find_package(catkin REQUIRED COMPONENTS
 # )
 
 ## Generate services in the 'srv' folder
-# add_service_files(
-#   FILES
-#   Service1.srv
-#   Service2.srv
-# )
+add_service_files(
+   FILES
+   Mobility.srv
+)
 
 ## Generate actions in the 'action' folder
 # add_action_files(
@@ -74,10 +73,11 @@ find_package(catkin REQUIRED COMPONENTS
 # )
 
 ## Generate added messages and services with any dependencies listed here
-# generate_messages(
-#   DEPENDENCIES
-#   std_msgs  # Or other packages containing msgs
-# )
+generate_messages(
+  DEPENDENCIES
+  std_msgs  # Or other packages containing msgs
+  geometry_msgs
+)
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
@@ -128,7 +128,7 @@ include_directories(
 
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
-#   src/${PROJECT_NAME}/bar-bot.cpp
+#   src/${PROJECT_NAME}/bar_bot.cpp
 # )
 
 ## Add cmake target dependencies of the library
@@ -140,8 +140,8 @@ include_directories(
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
 add_executable(face_tracker_node src/face_tracker_node.cpp)
-add_executable(grabber_node src/grabber_node.cpp src/HebiHelper.cpp)
-add_executable(kinematics_node src/kinematics_node.cpp src/kinematics.cpp src/HebiHelper.cpp)
+# add_executable(grabber_node src/grabber_node.cpp src/hebi_helper.cpp)
+add_executable(mobility_server src/mobility_server.cpp src/kinematics.cpp src/hebi_helper.cpp)
 add_executable(commander_node src/cup_commander.cpp)
 
 ## Rename C++ executable without prefix
@@ -153,21 +153,21 @@ add_executable(commander_node src/cup_commander.cpp)
 ## Add cmake target dependencies of the executable
 ## same as for the library above
 add_dependencies(face_tracker_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-add_dependencies(kinematics_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-add_dependencies(grabber_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(mobility_server ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+# add_dependencies(grabber_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(commander_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(face_tracker_node
   ${catkin_LIBRARIES}
 )
-target_link_libraries(kinematics_node
+target_link_libraries(mobility_server
   ${catkin_LIBRARIES}
 )
 
-target_link_libraries(grabber_node
-  ${catkin_LIBRARIES}
-)
+#target_link_libraries(grabber_node
+#  ${catkin_LIBRARIES}
+#)
 target_link_libraries(commander_node
   ${catkin_LIBRARIES}
 )
@@ -213,7 +213,7 @@ install(PROGRAMS
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_bar-bot.cpp)
+# catkin_add_gtest(${PROJECT_NAME}-test test/test_bar_bot.cpp)
 # if(TARGET ${PROJECT_NAME}-test)
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()
