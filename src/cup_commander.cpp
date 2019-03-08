@@ -132,13 +132,42 @@ int main(int argc, char **argv) {
 
     count = 0;
     while(ros::ok()){
-        last_cup_pos.point.z = .06;
-        target_position_publisher.publish(last_cup_pos);
+        auto temp = last_cup_pos;
+        temp.point.z = .06;
+        temp.point.x *= .9;
+        temp.point.y *= .9;
+        target_position_publisher.publish(temp);
+        if (++count % 500 == 0) {
+            break;
+        }
+        loop_rate.sleep();
+    }
+
+    count = 0;
+    while(ros::ok()){
+        auto temp = last_cup_pos;
+        temp.point.z = .06;
+        temp.point.x *= 1.04;
+        temp.point.y *= 1.04;
+        target_position_publisher.publish(temp);
+        if (++count % 500 == 0) {
+            target_gripper_state_publisher.publish(false);
+            break;
+        }
+        loop_rate.sleep();
+    }
+
+    count = 0;
+    while(ros::ok()){
+        auto temp = last_cup_pos;
+        temp.point.z = .4;
+        target_position_publisher.publish(temp);
         if (++count % 500 == 0) {
             target_gripper_state_publisher.publish(false);
         }
         loop_rate.sleep();
     }
+
     ros::shutdown();
 
     return 0;

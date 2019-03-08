@@ -6,18 +6,28 @@
 #include "tf/transform_datatypes.h"
 #include "HebiHelper.hpp"
 
+// Ros subscriber/publisher info
 static std::string target_subscriber_name;
 static const std::string joint_state_name("/joint_state");
 static const std::string joint_state_feedback_name("/hebiros/all/feedback/joint_state");
 static std::string current_pose_topic_name;
+ros::Publisher joint_state_publisher;
+ros::Publisher fkin_pub;
 
+// HEBI info
 static const std::vector<std::string> families = {"Arm", "Arm", "Arm", "Arm", "Arm", "Arm"};
 static const std::vector<std::string> names  = {"base", "pitch_1", "pitch_2", "pitch_3", "wrist", "gripper"};
 static HebiHelper* helper_p;
+static geometry_msgs::PoseStamped feedback_pose;
 
+
+// Stuff for handling trajectories
+
+// Time
 static ros::Time prev_time;
 static double t_f;
 
+// Positions (angular)
 static double  q[num_joints];
 static double  qdot[num_joints];
 
@@ -29,11 +39,11 @@ static double  qdotmax[num_joints] = {.8, .8, .8, 1, .8};
 
 static double default_pos[num_joints] = {0, 0.785, -1.57, -0.785, 0};
 
-ros::Publisher joint_state_publisher;
-ros::Publisher fkin_pub;
+// Function declarations
+static  void followTrajectory();
 
 void initTrajectory(const sensor_msgs::JointState& target_joints) {
-    prev_time = ros::Time::now();
+    // prev_time = ros::Time::now();
     std::vector<double> qfinal = target_joints.position;
     int     i;
     double  tmove;        // Total move time
@@ -88,16 +98,52 @@ void processTargetState(const geometry_msgs::PointStamped& target_loc) {
 
 void processFeedback(const sensor_msgs::JointState& joints) {
     geometry_msgs::Point pt = jointAnglesToPosition(joints);
-    geometry_msgs::PoseStamped pose;
-    pose.pose.position = pt;
-    pose.header.stamp = ros::Time::now();
-    fkin_pub.publish(pose);
+    feedback_pose.pose.position = pt;
+    feedback_pose.header.stamp = ros::Time::now();
+    fkin_pub.publish(feedback_pose);
+}
+
+static double hypot(double x, double y, double z) {
+    return sqrt(x*x + y*y + z*z);
+}
+
+static double distance(const geometry_msgs::Point& p1, const geometry_msgs::Point& p2) {
+    return hypot(p1.x - p2.x, p1.y - p2.y, p1.z - p2.z);
+}
+
+static bool areWeThereYet(const geometry_msgs::PointStamped& target_loc, double dist) {
+    return distance(target_loc.point, feedback_pose.pose.position) < dist;
+}
+
+void blockingMoveTo(const geometry_msgs::PointStamped& target_loc) {
+    sensor_msgs::JointState angles = positionToJointAngles(target_loc.point);
+    initTrajectory(angles);
+
+    angles.header.stamp = ros::Time::now();
+    angles.name = joint_names;
+
+    // // Set the roll of the gripper
+    // tf::Quaternion q;
+    // tf::quaternionMsgToTF(target_ori, q);
+    // tf::Matrix3x3 m(q);
+    // // Roll pitch yaw
+    // double r, p, y;
+    // m.getRPY(r, p, y);
+    // // std::cout << "sizes: " << num_joints - 1 << ", " << angles.position.size() << std::endl;
+    // // angles.position[num_joints-1] = r;
+
+    joint_state_publisher.publish(angles);
+
+    static constexpr double max_dist = 0.5; // meters
+    while (!areWeThereYet(target_loc, max_dist)) {
+        followTrajectory();
+    }
+    return;
 }
 
 void followTrajectory() {
     sensor_msgs::JointState cmdMsg;
     cmdMsg.position.resize(num_joints);
-<<<<<<< HEAD
 
     // cmdMsg.velocity.resize(num_joints);
 

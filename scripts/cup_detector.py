@@ -99,7 +99,7 @@ def hue_mask(img, minHue, maxHue, minSaturation, maxSaturation, minValue, maxVal
 
 
 def process_image(img):
-    binary = hue_mask(img, 30, 55, 20, 160, 20, 160)
+    binary = hue_mask(img, 30, 55, 15, 160,15, 160)
     kernel = np.ones((3,3),np.uint8)
     binary = cv2.erode(binary,kernel,iterations = 3)
     binary = cv2.dilate(binary,kernel,iterations = 3)
@@ -109,8 +109,9 @@ def process_image(img):
 def find_cups(img):
     binary, contours = process_image(img)
     result = cv2.cvtColor(binary, cv2.COLOR_GRAY2BGR)
-    cv2.drawContours(result,contours,0,(255,0,0),2)
+    cv2.drawContours(result,contours,-1,(255,0,0),2)
     rectangles = []
+    failed_rects = []
     for contour in contours:
         if cv2.contourArea(contour) < MIN_CONTOUR_AREA:
             continue
@@ -120,19 +121,26 @@ def find_cups(img):
         else:
             rect_cnt =np.int0(cv2.cv.BoxPoints(rect))
 
-        error = compare_rectangle(contour, rect_cnt)
-        if error < SHAPE_RET_THRESHOLD:
-            rectangles.append(rect_cnt)
-            if ISCV3:
-                cv2.putText(result, str(error), rect_cnt[0], cv2.FONT_HERSHEY_SIMPLEX, 1, (255,255,255), 5, cv2.LINE_AA)
-            else:
-                cv2.putText(result, str(error), rect_cnt[0], cv2.FONT_HERSHEY_SIMPLEX, 1, (255,255,255), 5, cv2.CV_AA)
-        else:
-            if ISCV3:
-                cv2.putText(result, str(error), rect_cnt[0], cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,255), 5, cv2.LINE_AA)
-            else:
-                cv2.putText(result, str(error), rect_cnt[0], cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,255), 5, cv2.CV_AA)
-        cv2.drawContours(result,rectangles,0,(0,255,0),2)
+        approx = cv2.approxPolyDP(contour, .03 * cv2.arcLength(contour, True), True)
+        if len(approx) != 4:
+            failed_rects.append(approx)
+            continue
+        rectangles.append(approx)
+
+        # error = compare_rectangle(contour, rect_cnt)
+        # if error < SHAPE_RET_THRESHOLD:
+        #     rectangles.append(rect_cnt)
+        #     if ISCV3:
+        #         cv2.putText(result, str(error), tuple(rect_cnt[0]), cv2.FONT_HERSHEY_SIMPLEX, 1, (255,255,255), 2, cv2.LINE_AA)
+        #     else:
+        #         cv2.putText(result, str(error), rect_cnt[0], cv2.FONT_HERSHEY_SIMPLEX, 1, (255,255,255), 2, cv2.CV_AA)
+        # else:
+        #     if ISCV3:
+        #         cv2.putText(result, str(error), tuple(rect_cnt[0]), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,255), 2, cv2.LINE_AA)
+        #     else:
+        #         cv2.putText(result, str(error), rect_cnt[0], cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,255), 2, cv2.CV_AA)
+    cv2.drawContours(result,rectangles,-1,(0,255,0),2)
+    cv2.drawContours(result,failed_rects,-1,(0,0,255),2)
     return result, rectangles
 # def image_callback(bgr, depth):
 #     """
@@ -275,7 +283,7 @@ def local3d_to_global(local):
     # TODO: plus or minus cam offset? Depends on how defined
     ret = np.dot(rotate_z(theta1), (permuted + cam_offset))
     # Minimum height of .05
-    ret[2] = max(0.15, ret[2])
+    ret[2] = max(0.1, ret[2])
     return ret
     # return permuted
 
@@ -288,8 +296,8 @@ def init_realsense():
     # TODO: bump up resolution?
     print("start init")
     config = rs.config()
-    config.enable_stream(rs.stream.depth, 640, 360, rs.format.z16, 30)
-    config.enable_stream(rs.stream.color, 640, 360, rs.format.bgr8, 30)
+    config.enable_stream(rs.stream.depth, 1280, 720, rs.format.z16, 30)
+    config.enable_stream(rs.stream.color, 1280, 720, rs.format.bgr8, 30)
 
     # Start streaming
     profile = pipeline.start(config)
@@ -311,6 +319,30 @@ def joint_state_feedback_callback(joint_state):
     global theta1
     theta1 = joint_state.position[0]
     print(theta1)
+
+def find_max_contour(contours):
+    """
+    Return the largest contour in the vector of contours by area, as long
+    as that largest contour has a sufficiently large area.
+    Return [] if no contour is sufficiently large.
+    """
+    if len(contours)==0:
+        return []
+    max_contour_area = cv2.contourArea(contours[0])
+    max_contour = contours[0]
+    max_index = 0
+    for i, cnt in enumerate(contours):
+        area = cv2.contourArea(cnt)
+        if area>max_contour_area:
+            max_contour=cnt
+            max_contour_area=area
+            max_index = i
+    epsilon = 0.02*cv2.arcLength(max_contour,True)
+    max_contour = cv2.approxPolyDP(max_contour,epsilon,True)
+    area = cv2.contourArea(max_contour)
+    if area < 600:
+        return []
+    return max_contour
 
 def main():
     try:
