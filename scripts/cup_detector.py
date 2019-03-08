@@ -12,7 +12,7 @@ ISCV3 = cv2.__version__[0]=="3"
 
 # Ros pub/sub
 from std_msgs.msg import String
-from geometry_msgs.msg import PointStamped, PoseStamped
+from geometry_msgs.msg import PointStamped, PoseStamped, PoseArray, Pose
 from sensor_msgs.msg import Image, JointState
 from cv_bridge import CvBridge, CvBridgeError
 # import message_filters
@@ -32,13 +32,6 @@ align = None  # Used to align the depth and color images
 
 # the current yaw of the arm in radians
 theta1 = 0
-
-
-# bgr and depth camera global variables
-# image_ready = False
-# image_bgr = None
-# image_depth = None
-# image_lock = Lock()
 
 def compare_rectangle(cnt, rect_cnt):
     square_error=0.0
@@ -100,9 +93,9 @@ def hue_mask(img, minHue, maxHue, minSaturation, maxSaturation, minValue, maxVal
 
 def process_image(img):
     binary = hue_mask(img, 30, 55, 15, 160,15, 160)
-    kernel = np.ones((3,3),np.uint8)
-    binary = cv2.erode(binary,kernel,iterations = 3)
-    binary = cv2.dilate(binary,kernel,iterations = 3)
+    kernel = np.ones((5,5),np.uint8)
+    binary = cv2.erode(binary,kernel,iterations = 7)
+    binary = cv2.dilate(binary,kernel,iterations = 7)
     _, contours, hierarchy = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     return binary, contours
 
@@ -125,52 +118,23 @@ def find_cups(img):
         if len(approx) != 4:
             failed_rects.append(approx)
             continue
+        if cv2.contourArea(approx) < 6000:
+            failed_rects.append(approx)
+            continue
+        # else:
+        #     print(cv2.contourArea(approx))
         rectangles.append(approx)
 
-        # error = compare_rectangle(contour, rect_cnt)
-        # if error < SHAPE_RET_THRESHOLD:
-        #     rectangles.append(rect_cnt)
-        #     if ISCV3:
-        #         cv2.putText(result, str(error), tuple(rect_cnt[0]), cv2.FONT_HERSHEY_SIMPLEX, 1, (255,255,255), 2, cv2.LINE_AA)
-        #     else:
-        #         cv2.putText(result, str(error), rect_cnt[0], cv2.FONT_HERSHEY_SIMPLEX, 1, (255,255,255), 2, cv2.CV_AA)
-        # else:
-        #     if ISCV3:
-        #         cv2.putText(result, str(error), tuple(rect_cnt[0]), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,255), 2, cv2.LINE_AA)
-        #     else:
-        #         cv2.putText(result, str(error), rect_cnt[0], cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,255), 2, cv2.CV_AA)
+
     cv2.drawContours(result,rectangles,-1,(0,255,0),2)
     cv2.drawContours(result,failed_rects,-1,(0,0,255),2)
     return result, rectangles
-# def image_callback(bgr, depth):
-#     """
-#     Takes the associated bgr and depth image, and updates the global variables
-#     containing them so that we can process them.
-#     """
-#     with image_lock:
-#         global image_bgr
-#         global image_depth
-#         global image_ready
-#         image_bgr = bgr
-#         image_depth = deresult = cv2.cvtColor(binary, cv2.COLOR_GRAY2BGR)pth
-#         image_ready = True
 
-
-def process_images():
+def process_images(detections):
     """
     Process the latest images, waiting for new ones to become available if necessary.
     Publishes the new estimate of the global position.
     """
-
-    # try:
-    #     with image_lock:
-    #         global image_ready
-    #         if image_ready:
-    #             cv_bgr  = bridge.imgmsg_to_cv2(image_bgr, "bgr8")
-    #             cv_depth  = bridge.imgmsg_to_cv2(image_depth, "mono16")
-    #             image_ready = False  # Don't process the same images twice.
-    # except CvBridgeError as e:
-    #     print(e)
 
     # Get frameset of color and depth
     # print("waiting for frames")
@@ -195,29 +159,80 @@ def process_images():
     color_image = np.asanyarray(color_frame.get_data())
 
     # Finding the cup
-    result, rectangles = find_cups(color_image)
-    max_contour = find_max_contour(rectangles);
+    result_img, rectangles = find_cups(color_image)
+    dist_error = 0.2
+    merging_dist = 0.06
+    delete_score = 0
+    min_score = 5
+    max_score = 7
+    centers = []
+    stamped_positions = PoseArray()
+    stamped_positions.header.stamp = rospy.Time.now()
+
+    #merge split contours
+    for rect in rectangles:
+        cx, cy = get_contour_centroid(rect)
+        local = pixel_to_local3d(cx, cy, aligned_depth_frame, depth_intrin)
+        world = local3d_to_global(local)
+        merged = False
+        for center in centers:
+            if np.linalg.norm(center-world) <= merging_dist:
+                center = (center+world)/2
+                merged = True
+                break
+        if not merged:
+            centers.append(world)
+
+    #assign contours to detections
+    for center in centers:
+        assigned_det = -1
+        closest_dist = float('inf')
+        for i in range(len(detections)):
+            score, det = detections[i]
+            avg = np.array([sum(x) for x in zip(*det)])/len(det)
+            dist = np.linalg.norm(avg-center)
+            if  dist <= dist_error and dist <= closest_dist :
+                assigned_det = i
+                closest_dist = dist
+        if assigned_det == -1:
+            detections.append((1.5, [center]))
+        else:
+            score, det = detections[assigned_det]
+            det.append(center)
+            detections[assigned_det] = (score+1.5, det)
+            if len(det) >5:
+                det.pop(0)
+
+    #update detection scores/decide which to return
+    for i in range(len(detections)-1,-1,-1):
+        score, det = detections[i]
+        detections[i] = (score - 0.5, det)
+        if score < 0:
+            detections.pop(i)
+            continue
+        if score >=min_score:
+            center = det[len(det)-1]
+            p = Pose()
+            p.position.x = center[0]
+            p.position.y = center[1]
+            p.position.z = center[2]
+            stamped_positions.poses.append(p)
+        if score >max_score:
+            detections[i] = max_score, det
+
+    #print(len(stamped_positions.poses))
+    position_pub.publish(stamped_positions)
+
+
 
     # Publish the feedback image
     global image_pub
     try:
-        image_pub.publish(bridge.cv2_to_imgmsg(result,"bgr8"))
+        image_pub.publish(bridge.cv2_to_imgmsg(result_img,"bgr8"))
     except CvBridgeError as e:
         print(e)
 
-    # Find the global coords of the cup
-    if not max_contour == []:
-        cx, cy = get_contour_centroid(max_contour)
-        local = pixel_to_local3d(cx, cy, aligned_depth_frame, depth_intrin)
-        world = local3d_to_global(local)
-
-        # Publish the coordinates
-        stamped_pos = PointStamped()
-        stamped_pos.point.x = world[0]
-        stamped_pos.point.y = world[1]
-        stamped_pos.point.z = world[2]
-        stamped_pos.header.stamp = rospy.Time.now()
-        position_pub.publish(stamped_pos)
+    return detections
 
 def get_contour_centroid(contour):
     """
@@ -362,15 +377,15 @@ def main():
                 rospy.get_param("processed_image_topic"), Image, queue_size=10)
 
         global position_pub
-        position_pub = rospy.Publisher(
-                rospy.get_param("cup_detection_topic"), PointStamped, queue_size=10)
+        position_pub = rospy.Publisher("/bar_bot/cup_multidetections", PoseArray, queue_size=10)
         global joint_state_feedback_sub
         joint_state_feedback_sub = rospy.Subscriber("/hebiros/all/feedback/joint_state", JointState, joint_state_feedback_callback)
 
         init_realsense()
 
+        detections =[]
         while not rospy.is_shutdown():
-            process_images()
+            detections = process_images(detections)
             # rospy.spinOnce()
 
     except KeyboardInterrupt:

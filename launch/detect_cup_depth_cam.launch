@@ -1,0 +1,11 @@
+<launch>
+    <param name="processed_image_topic" type="string" value="barbot/processed" />
+    <param name="cup_detection_topic" type="string" value="barbot/cup_detections" />
+    <param name="target_position_topic" type="string" value="barbot/target_position" />
+    <param name="target_gripper_state_topic" type="string" value="barbot/target_gripper_state" />
+    <param name="current_pose_topic" type="string" value="barbot/current_pose" />
+
+    <node name ="cup_detector_node" pkg="bar-bot" type="cup_detector.py" output="screen" required="true"/>
+
+
+</launch>
