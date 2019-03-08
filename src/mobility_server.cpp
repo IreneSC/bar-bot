@@ -28,7 +28,7 @@ static double  qdot[num_joints];
 static double  a[num_joints], b[num_joints], c[num_joints], d[num_joints];
 
 // Max speeds.
-static double  qdotmax[num_joints] = {.8, .8, .8, 1, .8};
+static double  qdotmax[num_joints] = {.1, .1, .1, .1, .1};
 
 static double default_pos[num_joints] = {0, 0.785, -1.57, -0.785, 0};
 
@@ -61,7 +61,8 @@ static bool areWeThereYet(const geometry_msgs::Point& target_loc, double dist) {
 // Calculate the cubic spline parameters. If use_cubic_spline is false, then
 // go immediately to end state by setting time-to-move to 0
 static void initTrajectory(const sensor_msgs::JointState& target_joints,
-                           const bool use_cubic_spline) {
+                           const bool use_cubic_spline,
+                           const double min_time) {
     prev_time = ros::Time::now();
     std::vector<double> qfinal = target_joints.position;
     int     i;
@@ -70,7 +71,7 @@ static void initTrajectory(const sensor_msgs::JointState& target_joints,
 
     // Pick a move time.  Note this is approximate.  We could compute
     // the absolute fastest time or pass as an argument.
-    tmove = .25;
+    tmove = min_time;
     for (i = 0 ; i < num_joints ; i++)
     {
         tmp = 2.0 * fabs(qfinal[i] - q[i]) / qdotmax[i];
@@ -105,10 +106,11 @@ static void processFeedback(const sensor_msgs::JointState& joints) {
 // Block until we reach the target location target_loc
 // Return true if the target was reached
 static bool block(const geometry_msgs::Point& target_loc, double timeout_secs) {
-    static constexpr double max_dist = 0.5; // meters
+    static constexpr double max_dist = 0.08; // meters
     auto cur_time = ros::Time::now();
     while (!areWeThereYet(target_loc, max_dist) && (ros::Time::now() - cur_time).toSec() < timeout_secs) {
-        usleep(100*1000);
+        usleep(100);
+        followTrajectory();
     }
     return areWeThereYet(target_loc, max_dist);
 }
@@ -151,10 +153,10 @@ bool MobilitySrv::processRequest(Mobility::Request& req, Mobility::Response& res
     helper_p->setPourAngle(req.pour_angle);
 
     // If use trajectory is false, it just sets the "time to move" to 0 seconds
-    initTrajectory(joint_state, req.use_trajectory);
+    initTrajectory(joint_state, req.use_trajectory, req.move_time);
 
     if (req.is_blocking) {
-        res.target_reached = block(req.target_loc, 5);
+        res.target_reached = block(req.target_loc, req.move_time * 1.5);
     }
 
     joint_state_publisher.publish(joint_state);

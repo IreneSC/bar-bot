@@ -3,7 +3,7 @@
 #define FLIP_PITCHES
 
 // Gripper boundaries, {min, max}
-static double gripbound[2] = {0, -1.0};
+static double gripbound[2] = {-1.0, 0};
 
 HebiHelper::HebiHelper(ros::NodeHandle n,
         const std::string& group_name,

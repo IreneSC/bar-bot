@@ -4,5 +4,6 @@ float64 pour_angle              # Angle in radians of the roll of the gripper
 bool close_gripper              # If true, close the gripper
 bool is_blocking                # If true, return only after reach target
 bool use_trajectory             # If true, generate cubic spline
+float64 move_time               # How long to take to get to the trajectory in secs
 ---
 bool target_reached             # If false, likely timed out or was not blocking
