@@ -27,6 +27,8 @@ static double  a[num_joints], b[num_joints], c[num_joints], d[num_joints];
 // Max speeds.
 static double  qdotmax[num_joints] = {.05, .05, .05, .05, .05};
 
+static double default_pos[num_joints] = {0, 0.785, -1.57, -0.785, 0};
+
 ros::Publisher joint_state_publisher;
 ros::Publisher fkin_pub;
 
@@ -95,18 +97,40 @@ void processFeedback(const sensor_msgs::JointState& joints) {
 void followTrajectory() {
     sensor_msgs::JointState cmdMsg;
     cmdMsg.position.resize(num_joints);
+
     // cmdMsg.velocity.resize(num_joints);
 
     // Advance time, but hold at t=0 to stay at the final position.
-    double t = t_f - (ros::Time::now() - prev_time).toSec();
-    if (t > 0.0)
-        t = 0.0;
+    double t = (ros::Time::now() - prev_time).toSec();
+    //if (t > 0.0)
+    //    t = 0.0;
+
+    // Calculates desired triangle position
+    int servo_test_ind = 0;
+    double triang_amp = 0.785; // Sweep between +- 45 deg
+    double triang_period = 5; // s
+    double triang_vel = triang_amp/triang_period;  // rad/s
+    double triang_pos = t * triang_vel; // rad
+    // Switch direction at appropriate time
+    if (t >= triang_period) {
+        prev_time = ros::Time::now();
+        triang_amp *= -1;
+    }
+
 
     // Compute the new position and velocity commands.
     for (int i = 0 ; i < num_joints ; i++)
     {
-        q[i]    = a[i]+t*(b[i]+t*(c[i]+t*d[i]));
-        qdot[i] = b[i]+t*(2.0*c[i]+t*3.0*d[i]);
+        if (i = 0) {
+            q[i] = triang_pos;
+            qdot[i] = triang_vel;
+        } else {
+            q[i] = default_pos[i];
+            qdot[i] = 0;
+        }
+
+        //q[i]    = a[i]+t*(b[i]+t*(c[i]+t*d[i]));
+        //qdot[i] = b[i]+t*(2.0*c[i]+t*3.0*d[i]);
 
         cmdMsg.position[i] = q[i];
         // cmdMsg.velocity[i] = qdot[i];
