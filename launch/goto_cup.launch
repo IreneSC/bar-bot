@@ -9,18 +9,18 @@
 
     <!-- Camera -->
     <!-- <include file="$(find realsense2_camera)/launch/rs_camera.launch"/> -->
-    <node name ="cup_detector_node" pkg="bar-bot" type="cup_detector.py" output="screen" required="true"/>
+    <node name ="cup_detector_node" pkg="bar_bot" type="cup_detector.py" output="screen" required="true"/>
 
     <!-- Hebi interaction/kinematics -->
     <node name="hebiros_node" pkg="hebiros" type="hebiros_node" respawn="false" output="screen"/>
-    <node name="kinematics" pkg="bar-bot" type="kinematics_node" />
+    <node name="mobility" pkg="bar_bot" type="mobility_server" />
 
     <!-- Commander -->
-    <node name="commander" pkg="bar-bot" type="commander_node" />
+    <node name="commander" pkg="bar_bot" type="commander_node" />
 
     <!-- Generic ROS/Visualization stuff -->
-    <!-- <param name="robot_description" textfile="$(find bar-bot)/urdf/basic_arm.urdf"/> -->
-    <!-- <node name="rviz" pkg="rviz" type="rviz" args="-d $(find bar-bot)/rviz/viewrobot.rviz"/> -->
+    <!-- <param name="robot_description" textfile="$(find bar_bot)/urdf/basic_arm.urdf"/> -->
+    <!-- <node name="rviz" pkg="rviz" type="rviz" args="-d $(find bar_bot)/rviz/viewrobot.rviz"/> -->
     <!-- <node name="rsp" pkg="robot_state_publisher" type="robot_state_publisher"> -->
     <!--     <param name="ignore_timestamp" value="true"/> -->
     <!-- </node> -->

@@ -92,7 +92,8 @@ def hue_mask(img, minHue, maxHue, minSaturation, maxSaturation, minValue, maxVal
 
 
 def process_image(img):
-    binary = hue_mask(img, 30, 55, 15, 160,15, 160)
+    # binary = hue_mask(img, 30, 55, 15, 160,15, 160)
+    binary = hue_mask(img, 27, 58, 10, 170,10, 170)
     kernel = np.ones((5,5),np.uint8)
     binary = cv2.erode(binary,kernel,iterations = 7)
     binary = cv2.dilate(binary,kernel,iterations = 7)
@@ -160,11 +161,11 @@ def process_images(detections):
 
     # Finding the cup
     result_img, rectangles = find_cups(color_image)
-    dist_error = 0.2
-    merging_dist = 0.06
+    dist_error = 0.08
+    merging_dist = 0.03
     delete_score = 0
     min_score = 5
-    max_score = 7
+    max_score = 15
     centers = []
     stamped_positions = PoseArray()
     stamped_positions.header.stamp = rospy.Time.now()
@@ -220,7 +221,7 @@ def process_images(detections):
         if score >max_score:
             detections[i] = max_score, det
 
-    #print(len(stamped_positions.poses))
+    print("num poses:", len(stamped_positions.poses))
     position_pub.publish(stamped_positions)
 
 
@@ -288,7 +289,7 @@ def local3d_to_global(local):
     """
     global theta1
     # 3x1 np matrix of offset of camera to global frame
-    cam_offset = [.1, .08, 0.07]
+    cam_offset = [.097, .08, 0.07]
 
     # Global x direction is local z (i.e. planar distance from camera)
     # Global y is local x (left/right in camera frame)
@@ -333,7 +334,7 @@ def init_realsense():
 def joint_state_feedback_callback(joint_state):
     global theta1
     theta1 = joint_state.position[0]
-    print(theta1)
+    # print(theta1)
 
 def find_max_contour(contours):
     """
@@ -386,6 +387,7 @@ def main():
         detections =[]
         while not rospy.is_shutdown():
             detections = process_images(detections)
+            print(detections)
             # rospy.spinOnce()
 
     except KeyboardInterrupt:

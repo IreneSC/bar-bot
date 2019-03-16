@@ -15,29 +15,22 @@ class HebiHelper{
 private:
     // ros::NodeHandle n;
     sensor_msgs::JointState feedback;       // The actuator feedback struccture
-    bool gripper_open = true;                   // Gripper state
-    // volatile int            feedbackvalid = 0;
-    // volatile double         goalpos;        // The goal position
-    // volatile int            valid;
-    // volatile int            isValidPrev = 1;
+    bool   gripper_closed = false;          // Gripper state
+    double pour_angle = 0;                  // Gripper roll
 
     std::string group_name;
     std::vector<std::string> names;
     std::vector<std::string> families;
 
-    ros::Subscriber goalSubscriber;
-    ros::Subscriber validSubscriber;
+    // ros::Subscriber goalSubscriber;
+    // ros::Subscriber validSubscriber;
     ros::Subscriber feedback_subscriber;
-    ros::Subscriber gripper_subscriber;
+    // ros::Subscriber gripper_subscriber;
     ros::Publisher command_publisher;
-
-    // sensor_msgs::JointState command_msg;
 
     void setupGroup(ros::NodeHandle n);
     void feedbackCallback(const sensor_msgs::JointState::ConstPtr& data);
-    void gripperCallback(const std_msgs::Bool::ConstPtr& msg);
-    // void goalCallback(const std_msgs::Float64::ConstPtr& msg);
-    // void validCallback(const std_msgs::Bool::ConstPtr& msg);
+    // void gripperCallback(const std_msgs::Bool::ConstPtr& msg);
 
 public:
     HebiHelper(ros::NodeHandle n,
@@ -46,8 +39,9 @@ public:
         const std::vector<std::string>& families);
 
     const inline sensor_msgs::JointState getFeedback() { return feedback; }
+    bool setGripperClosed(bool is_closed); // Returns previous value
 
-    // const inline int isValid() { return valid; }
+    double setPourAngle(double angle); // Returns previous value
 
     void goToJointState(sensor_msgs::JointState joints);
 
