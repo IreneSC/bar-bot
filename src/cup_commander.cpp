@@ -134,7 +134,7 @@ int main(int argc, char **argv) {
     temp_mobility.request.is_blocking        = true;
     temp_mobility.request.use_trajectory     = true;
     temp_mobility.request.close_gripper      = false;
-    temp_mobility.request.move_time          = 2; // Seconds
+    temp_mobility.request.move_time          = 4; // Seconds
 
     temp_mobility.request.target_loc.x = 0;
     temp_mobility.request.target_loc.y = .5;
@@ -168,7 +168,7 @@ int main(int argc, char **argv) {
             } else {
                 ROS_ERROR("call failed!");
             }
-            waitForNewCups();
+            // waitForNewCups();
             break;
         }
     }
@@ -176,8 +176,6 @@ int main(int argc, char **argv) {
     // Move in front of the cup
     geometry_msgs::Point saved_pos;
     while(ros::ok()){
-        ros::spinOnce();
-        loop_rate.sleep();
         if (cup_pose_array.poses.size() > 0) {
             saved_pos                           = cup_pose_array.poses[0].position;
             mobility.request.target_loc         = saved_pos;
@@ -187,8 +185,8 @@ int main(int argc, char **argv) {
             mobility.request.close_gripper      = false;
             mobility.request.move_time          = 1.5; // Seconds
 
-            mobility.request.target_loc.x *= .98;
-            mobility.request.target_loc.y *= .98;
+            mobility.request.target_loc.x *= .945;
+            mobility.request.target_loc.y *= .945;
             if (mobility_client.call(mobility)) {
                 ROS_ERROR("call successful!");
             } else {
@@ -196,13 +194,15 @@ int main(int argc, char **argv) {
             }
             break;
         }
+        ros::spinOnce();
+        loop_rate.sleep();
     }
 
     // Move into the cup
     while(ros::ok()){
         ros::spinOnce();
         loop_rate.sleep();
-        if (cup_pose_array.poses.size() > 0) {
+        // if (cup_pose_array.poses.size() > 0) {
             mobility.request.target_loc         = saved_pos;
             mobility.request.pour_angle         = 0;
             mobility.request.is_blocking        = true;
@@ -218,7 +218,7 @@ int main(int argc, char **argv) {
                 ROS_ERROR("call failed!");
             }
             break;
-        }
+        // }
     }
     // waitForNewCups();
 
@@ -254,7 +254,7 @@ int main(int argc, char **argv) {
             mobility.request.target_loc         = saved_pos;
             mobility.request.pour_angle         = 0;
             mobility.request.is_blocking        = true;
-            mobility.request.use_trajectory     = false;
+            mobility.request.use_trajectory     = true;
             mobility.request.close_gripper      = true;
             mobility.request.move_time          = 1.5; // Seconds
 
@@ -281,8 +281,8 @@ int main(int argc, char **argv) {
             mobility.request.close_gripper      = true;
             mobility.request.move_time          = 1.5; // Seconds
 
-            mobility.request.target_loc.x *= 1.1;
-            mobility.request.target_loc.y *= 1.1;
+            mobility.request.target_loc.x *= 1.09;
+            mobility.request.target_loc.y *= 1.09;
             mobility.request.target_loc.z = 0.35;
             if (mobility_client.call(mobility)) {
                 ROS_ERROR("call successful!");
@@ -304,8 +304,8 @@ int main(int argc, char **argv) {
             mobility.request.close_gripper      = true;
             mobility.request.move_time          = 1.5; // Seconds
 
-            mobility.request.target_loc.x *= 1.10;
-            mobility.request.target_loc.y *= 1.10;
+            mobility.request.target_loc.x *= 1.090;
+            mobility.request.target_loc.y *= 1.090;
             mobility.request.target_loc.z = 0.35;
             if (mobility_client.call(mobility)) {
                 ROS_ERROR("call successful!");
@@ -325,12 +325,12 @@ int main(int argc, char **argv) {
             mobility.request.target_loc         = furthestPointFromTip();
             mobility.request.pour_angle         = 0;
             mobility.request.is_blocking        = true;
-            mobility.request.use_trajectory     = false;
-            mobility.request.close_gripper      = false;
-            mobility.request.move_time          = 0.2; // Seconds
+            mobility.request.use_trajectory     = true;
+            mobility.request.close_gripper      = true;
+            mobility.request.move_time          = 0.5; // Seconds
 
-            mobility.request.target_loc.x *= 1.1;
-            mobility.request.target_loc.y *= 1.1;
+            mobility.request.target_loc.x *= 1.09;
+            mobility.request.target_loc.y *= 1.09;
             mobility.request.target_loc.z = 0.35;
             if (mobility_client.call(mobility)) {
                 ROS_ERROR("call successful!");

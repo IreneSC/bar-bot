@@ -28,7 +28,7 @@ static double  qdot[num_joints];
 static double  a[num_joints], b[num_joints], c[num_joints], d[num_joints];
 
 // Max speeds.
-static double  qdotmax[num_joints] = {.1, .1, .1, .1, .1};
+static double  qdotmax[num_joints] = {.8, .8, .8, .8, .8};
 
 static double default_pos[num_joints] = {0, 0.785, -1.57, -0.785, 0};
 
@@ -36,7 +36,7 @@ static double default_pos[num_joints] = {0, 0.785, -1.57, -0.785, 0};
 static double hypot(double x, double y, double z);
 static double distance(const geometry_msgs::Point& p1, const geometry_msgs::Point& p2);
 static bool areWeThereYet(const geometry_msgs::PointStamped& target_loc, double dist);
-static void initTrajectory(const sensor_msgs::JointState& target_joints, const bool use_cubic_spline);
+static void initTrajectory(const sensor_msgs::JointState& target_joints, const bool use_cubic_spline, const double min_time);
 static void followTrajectory();
 // static void processTargetState(const geometry_msgs::PointStamped& target_loc);
 static void processFeedback(const sensor_msgs::JointState& joints);
@@ -93,6 +93,7 @@ static void initTrajectory(const sensor_msgs::JointState& target_joints,
         t_f = tmove;
     else
         t_f = 0; // No time to move - just go right there.
+    ROS_ERROR("t_f: %f", t_f);
 }
 
 // Handle feedback from hebi
@@ -121,7 +122,8 @@ static void followTrajectory() {
     cmdMsg.velocity.resize(num_joints);
 
     // Advance time, but hold at t=0 to stay at the final position.
-    double t = (ros::Time::now() - prev_time).toSec();
+    // double t = (ros::Time::now() - prev_time).toSec();
+    double t = (ros::Time::now() - prev_time).toSec() - t_f;
     if (t > 0.0)
         t = 0.0;
 

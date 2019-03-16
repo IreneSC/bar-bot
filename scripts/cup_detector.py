@@ -165,7 +165,7 @@ def process_images(detections):
     merging_dist = 0.03
     delete_score = 0
     min_score = 5
-    max_score = 15
+    max_score = 20
     centers = []
     stamped_positions = PoseArray()
     stamped_positions.header.stamp = rospy.Time.now()
