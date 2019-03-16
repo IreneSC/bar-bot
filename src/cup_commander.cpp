@@ -151,7 +151,9 @@ int main(int argc, char **argv) {
         temp.point.y *= 1.04;
         target_position_publisher.publish(temp);
         if (++count % 500 == 0) {
-            target_gripper_state_publisher.publish(false);
+            std_msgs::Bool not_true;
+            not_true.data = false;
+            target_gripper_state_publisher.publish(not_true);
             break;
         }
         loop_rate.sleep();
@@ -163,7 +165,9 @@ int main(int argc, char **argv) {
         temp.point.z = .4;
         target_position_publisher.publish(temp);
         if (++count % 500 == 0) {
-            target_gripper_state_publisher.publish(false);
+            std_msgs::Bool not_true;
+            not_true.data = false;
+            target_gripper_state_publisher.publish(not_true);
         }
         loop_rate.sleep();
     }
