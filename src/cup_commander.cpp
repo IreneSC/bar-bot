@@ -77,77 +77,8 @@ static geometry_msgs::Point furthestPointFromTip() {
     return best_pos;
 }
 
-int main(int argc, char **argv) {
-    ros::init(argc, argv, "commander_node");
-    ros::start();
+static void pourCups() {
     ros::Rate loop_rate(5);
-
-    ros::NodeHandle nh;
-    std::vector<geometry_msgs::Pose> empty_poses;
-    cup_pose_array.poses = empty_poses;
-    // last_arm_pos = geometry_msgs::PointStamped();
-    last_arm_pos.point.x = .3;
-    last_arm_pos.point.y = 0;
-    last_arm_pos.point.z = .1;
-    // cup_pose_array = geometry_msgs::PointStamped();
-    // cup_pose_array.point.x = .3;
-    // cup_pose_array.point.y = 0;
-    // cup_pose_array.point.z = .10;
-
-    cup_detection_topic = "/bar_bot/cup_multidetections";
-
-    // if (!nh.getParam("cup_detection_topic", cup_detection_topic))
-    // {
-    //   ROS_ERROR("cup_detection_topic param not specified");
-    //   return -1;
-    // }
-    if (!nh.getParam("target_position_topic", target_position_topic))
-    {
-      ROS_ERROR("target_position_topic param not specified");
-      return -1;
-    }
-    if (!nh.getParam("target_gripper_state_topic", target_gripper_state_topic))
-    {
-      ROS_ERROR("target_gripper_state_topic param not specified");
-      return -1;
-    }
-    if (!nh.getParam("current_pose_topic", current_pose_topic))
-    {
-      ROS_ERROR("current_pose_topic param not specified");
-      return -1;
-    }
-
-    mobility_client = nh.serviceClient<bar_bot::Mobility>("mobility");
-
-    // target_position_publisher
-    //     = nh.advertise<geometry_msgs::PointStamped>(target_position_topic, 1);
-    // target_gripper_state_publisher
-    //     = nh.advertise<std_msgs::Bool>(target_gripper_state_topic, 1);
-
-    cup_detection_subscriber = nh.subscribe(cup_detection_topic, 10,
-        &processCupPoses);
-    current_pose_subscriber = nh.subscribe(current_pose_topic, 10,
-        &processArmPose);
-
-    bar_bot::Mobility temp_mobility;
-    temp_mobility.request.pour_angle         = 0;
-    temp_mobility.request.is_blocking        = true;
-    temp_mobility.request.use_trajectory     = true;
-    temp_mobility.request.close_gripper      = false;
-    temp_mobility.request.move_time          = 4; // Seconds
-
-    temp_mobility.request.target_loc.x = 0;
-    temp_mobility.request.target_loc.y = .5;
-    temp_mobility.request.target_loc.z = .3;
-
-    ros::spinOnce();
-    if (mobility_client.call(temp_mobility)) {
-        ROS_ERROR("call successful!");
-    } else {
-        ROS_ERROR("call failed!");
-    }
-
-    int count = 0;
 
     // Move above the cup
     bar_bot::Mobility mobility;
@@ -342,43 +273,109 @@ int main(int argc, char **argv) {
         loop_rate.sleep();
     }
 
-    // count = 0;
-    // while(ros::ok()){
-    //     auto temp = cup_pose_array;
-    //     temp.point.z = .06;
-    //     temp.point.x *= .9;
-    //     temp.point.y *= .9;
-    //     target_position_publisher.publish(temp);
-    //     if (++count % 500 == 0) {
-    //         break;
-    //     }
-    //     loop_rate.sleep();
-    // }
+}
 
-    // count = 0;
-    // while(ros::ok()){
-    //     auto temp = cup_pose_array;
-    //     temp.point.z = .06;
-    //     temp.point.x *= 1.04;
-    //     temp.point.y *= 1.04;
-    //     target_position_publisher.publish(temp);
-    //     if (++count % 500 == 0) {
-    //         target_gripper_state_publisher.publish(false);
-    //         break;
-    //     }
-    //     loop_rate.sleep();
-    // }
+int main(int argc, char **argv) {
+    ros::init(argc, argv, "commander_node");
+    ros::start();
+    ros::Rate loop_rate(5);
 
-    // count = 0;
-    // while(ros::ok()){
-    //     auto temp = cup_pose_array;
-    //     temp.point.z = .4;
-    //     target_position_publisher.publish(temp);
-    //     if (++count % 500 == 0) {
-    //         target_gripper_state_publisher.publish(false);
-    //     }
-    //     loop_rate.sleep();
+    ros::NodeHandle nh;
+    std::vector<geometry_msgs::Pose> empty_poses;
+    cup_pose_array.poses = empty_poses;
+    // last_arm_pos = geometry_msgs::PointStamped();
+    last_arm_pos.point.x = .3;
+    last_arm_pos.point.y = 0;
+    last_arm_pos.point.z = .1;
+    // cup_pose_array = geometry_msgs::PointStamped();
+    // cup_pose_array.point.x = .3;
+    // cup_pose_array.point.y = 0;
+    // cup_pose_array.point.z = .10;
+
+    cup_detection_topic = "/bar_bot/cup_multidetections";
+
+    // if (!nh.getParam("cup_detection_topic", cup_detection_topic))
+    // {
+    //   ROS_ERROR("cup_detection_topic param not specified");
+    //   return -1;
     // }
+    if (!nh.getParam("target_position_topic", target_position_topic))
+    {
+      ROS_ERROR("target_position_topic param not specified");
+      return -1;
+    }
+    if (!nh.getParam("target_gripper_state_topic", target_gripper_state_topic))
+    {
+      ROS_ERROR("target_gripper_state_topic param not specified");
+      return -1;
+    }
+    if (!nh.getParam("current_pose_topic", current_pose_topic))
+    {
+      ROS_ERROR("current_pose_topic param not specified");
+      return -1;
+    }
+
+    mobility_client = nh.serviceClient<bar_bot::Mobility>("mobility");
+
+    // target_position_publisher
+    //     = nh.advertise<geometry_msgs::PointStamped>(target_position_topic, 1);
+    // target_gripper_state_publisher
+    //     = nh.advertise<std_msgs::Bool>(target_gripper_state_topic, 1);
+
+    cup_detection_subscriber = nh.subscribe(cup_detection_topic, 10,
+        &processCupPoses);
+    current_pose_subscriber = nh.subscribe(current_pose_topic, 10,
+        &processArmPose);
+
+    bar_bot::Mobility temp_mobility;
+    temp_mobility.request.pour_angle         = 0;
+    temp_mobility.request.is_blocking        = true;
+    temp_mobility.request.use_trajectory     = true;
+    temp_mobility.request.close_gripper      = false;
+    temp_mobility.request.move_time          = 4; // Seconds
+
+    temp_mobility.request.target_loc.x = 0;
+    temp_mobility.request.target_loc.y = .5;
+    temp_mobility.request.target_loc.z = .3;
+
+    ros::spinOnce();
+    if (mobility_client.call(temp_mobility)) {
+        ROS_ERROR("call successful!");
+    } else {
+        ROS_ERROR("call failed!");
+    }
+
+    // Move back and forth
+    bar_bot::Mobility mobility;
+    mobility.request.pour_angle         = 0;
+    mobility.request.is_blocking        = true;
+    mobility.request.use_trajectory     = true;
+    mobility.request.close_gripper      = false;
+    mobility.request.move_time          = 1.5; // Seconds
+
+    while(ros::ok()){
+        ros::spinOnce();
+        loop_rate.sleep();
+        mobility.request.target_loc.x =  0;
+        mobility.request.target_loc.y = .5;
+        mobility.request.target_loc.z = .3;
+
+        if (mobility_client.call(mobility)) {
+            ROS_ERROR("call successful!");
+        } else {
+            ROS_ERROR("call failed!");
+        }
+
+        mobility.request.target_loc.x = .3;
+        mobility.request.target_loc.y = .3;
+        mobility.request.target_loc.z = .15;
+
+        if (mobility_client.call(mobility)) {
+            ROS_ERROR("call successful!");
+        } else {
+            ROS_ERROR("call failed!");
+        }
+    }
 
     ros::shutdown();
 

@@ -13,6 +13,7 @@ static const std::vector<std::string> families = {"Arm", "Arm", "Arm", "Arm", "A
 static const std::vector<std::string> names  = {"base", "pitch_1", "pitch_2", "pitch_3", "wrist", "gripper"};
 static HebiHelper* helper_p;
 static geometry_msgs::PoseStamped feedback_pose;
+static sensor_msgs::JointState  feedback_joint_state;
 
 // Stuff for handling trajectories
 
@@ -37,7 +38,7 @@ static double hypot(double x, double y, double z);
 static double distance(const geometry_msgs::Point& p1, const geometry_msgs::Point& p2);
 static bool areWeThereYet(const geometry_msgs::PointStamped& target_loc, double dist);
 static void initTrajectory(const sensor_msgs::JointState& target_joints, const bool use_cubic_spline, const double min_time);
-static void followTrajectory();
+static bool followTrajectory();
 // static void processTargetState(const geometry_msgs::PointStamped& target_loc);
 static void processFeedback(const sensor_msgs::JointState& joints);
 static bool block(const geometry_msgs::Point& target_loc, double timeout_secs);
@@ -93,11 +94,12 @@ static void initTrajectory(const sensor_msgs::JointState& target_joints,
         t_f = tmove;
     else
         t_f = 0; // No time to move - just go right there.
-    ROS_ERROR("t_f: %f", t_f);
+    // ROS_ERROR("t_f: %f", t_f);
 }
 
 // Handle feedback from hebi
 static void processFeedback(const sensor_msgs::JointState& joints) {
+    feedback_joint_state = joints;
     geometry_msgs::Point pt = jointAnglesToPosition(joints);
     feedback_pose.pose.position = pt;
     feedback_pose.header.stamp = ros::Time::now();
@@ -111,12 +113,14 @@ static bool block(const geometry_msgs::Point& target_loc, double timeout_secs) {
     auto cur_time = ros::Time::now();
     while (!areWeThereYet(target_loc, max_dist) && (ros::Time::now() - cur_time).toSec() < timeout_secs) {
         usleep(100);
-        followTrajectory();
+        if(!followTrajectory())
+            return false;
     }
     return areWeThereYet(target_loc, max_dist);
 }
 
-static void followTrajectory() {
+// Return false if a collission is detected.
+static bool followTrajectory() {
     sensor_msgs::JointState cmdMsg;
     cmdMsg.position.resize(num_joints);
     cmdMsg.velocity.resize(num_joints);
@@ -127,6 +131,9 @@ static void followTrajectory() {
     if (t > 0.0)
         t = 0.0;
 
+    // Max difference between actual and predicted speeds.
+    static constexpr double tolerance = 1;
+
     // Compute the new position and velocity commands.
     for (int i = 0 ; i < num_joints ; i++)
     {
@@ -135,12 +142,20 @@ static void followTrajectory() {
 
         cmdMsg.position[i] = q[i];
         cmdMsg.velocity[i] = qdot[i];
+        if (abs(qdot[i] - feedback_joint_state.velocity[i]) > tolerance) {
+            ROS_ERROR("Collision detected on joint %d! Qdot: %f, feedback: %f, delta: %f",
+                      i, qdot[i], feedback_joint_state.velocity[i],
+                      abs(qdot[i] - feedback_joint_state.velocity[i]));
+            // helper_p->goToJointState(feedback_joint_state);
+            return false;
+        }
     }
 
     // Publish.
     cmdMsg.header.stamp = ros::Time::now();
     // cmdPub.publish(cmdMsg);
     helper_p->goToJointState(cmdMsg);
+    return true;
 }
 
 // Processes a request to move to some pose
@@ -179,6 +194,9 @@ int main(int argc, char **argv) {
 
         a[i] = b[i] = c[i] = d[i] = 0.0;
     }
+
+    feedback_joint_state.velocity.resize(num_joints);
+    feedback_joint_state.position.resize(num_joints);
 
     // Set up pub/sub
 
