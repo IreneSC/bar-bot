@@ -6,12 +6,15 @@ static const std::string joint_state_name("/joint_state");
 static const std::string joint_state_feedback_name("/hebiros/all/feedback/joint_state");
 static std::string current_pose_topic_name;
 static ros::Publisher joint_state_publisher;
+static ros::Publisher corrected_feedback_publisher;
 static ros::Publisher fkin_pub;
+static volatile bool service_ready;
 
 // HEBI info
 static const std::vector<std::string> families = {"Arm", "Arm", "Arm", "Arm", "Arm", "Arm"};
 static const std::vector<std::string> names  = {"base", "pitch_1", "pitch_2", "pitch_3", "wrist", "gripper"};
 static HebiHelper* helper_p;
+static volatile bool feedback_ready;
 static geometry_msgs::PoseStamped feedback_pose;
 static sensor_msgs::JointState  feedback_joint_state;
 
@@ -38,7 +41,7 @@ static double  a[num_joints], b[num_joints], c[num_joints], d[num_joints];
 // Max speeds.
 static double  qdotmax[num_joints] = {.8, .8, .8, .8, .8};
 
-static double default_pos[num_joints] = {0, 0.785, -1.57, -0.785, 0};
+// static double default_pos[num_joints] = {0, 0.785, -1.57, -0.785, 0};
 
 // Function declarations
 static double hypot(double x, double y, double z);
@@ -107,23 +110,38 @@ static void initTrajectory(const sensor_msgs::JointState& target_joints,
 
 // Handle feedback from hebi
 static void processFeedback(const sensor_msgs::JointState& joints) {
-    feedback_joint_state = joints;
     geometry_msgs::Point pt = jointAnglesToPosition(joints);
     feedback_pose.pose.position = pt;
     feedback_pose.header.stamp = ros::Time::now();
     fkin_pub.publish(feedback_pose);
+    feedback_joint_state = joints;
+
+    // Fix negatives
+    feedback_joint_state.position[1] = -feedback_joint_state.position[1];
+    feedback_joint_state.position[2] = -feedback_joint_state.position[2];
+    feedback_joint_state.velocity[1] = -feedback_joint_state.velocity[1];
+    feedback_joint_state.velocity[2] = -feedback_joint_state.velocity[2];
+
+    feedback_ready = true;
+    // ROS_ERROR("Got feedback");
+    // ROS_INFO_STREAM("corrected feedback joints: " << feedback_joint_state);
+    corrected_feedback_publisher.publish(feedback_joint_state);
 }
 
 // Block until we reach the target location target_loc
 // Return true if the target was reached
 static bool block(const geometry_msgs::Point& target_loc, double timeout_secs) {
-    static constexpr double max_dist = 0.08; // meters
+    static constexpr double max_dist = 0.15; // meters
     auto cur_time = ros::Time::now();
     while (!areWeThereYet(target_loc, max_dist) && (ros::Time::now() - cur_time).toSec() < timeout_secs) {
-        usleep(100);
-        if(!followTrajectory())
+        ros::spinOnce();
+        if(!followTrajectory()) {
+            ROS_INFO("Failed moveto, returning false");
             return false;
+        }
+        usleep(100);
     }
+    ROS_INFO("distance off: %f", distance(target_loc, feedback_pose.pose.position));
     return areWeThereYet(target_loc, max_dist);
 }
 
@@ -140,7 +158,7 @@ static bool followTrajectory() {
         t = 0.0;
 
     // Max difference between actual and predicted speeds.
-    static constexpr double tolerance = 1;
+    static constexpr double tolerance = .5;
 
     // Compute the new position and velocity commands.
     if (!pouring) {
@@ -152,22 +170,31 @@ static bool followTrajectory() {
             cmdMsg.position[i] = q[i];
             cmdMsg.velocity[i] = qdot[i];
             if (abs(qdot[i] - feedback_joint_state.velocity[i]) > tolerance) {
-                ROS_ERROR("Collision detected on joint %d! Qdot: %f, feedback: %f, delta: %f",
-                          i, qdot[i], feedback_joint_state.velocity[i],
-                          abs(qdot[i] - feedback_joint_state.velocity[i]));
+                ROS_ERROR_THROTTLE(0.1,
+                        "Collision detected on joint %d! Qdot: %f, feedback: %f, delta: %f",
+                        i, qdot[i], feedback_joint_state.velocity[i],
+                        abs(qdot[i] - feedback_joint_state.velocity[i]));
+
+                // Stop moving, since we hit something
+                auto temp = feedback_joint_state;
+                for (int j = 0; j < temp.velocity.size(); j++) {
+                    temp.velocity[j] = 0;
+                }
+                helper_p->goToJointState(temp);
+                initTrajectory(temp, false, 0);
                 // helper_p->goToJointState(feedback_joint_state);
                 return false;
             }
         }
     } else {
         geometry_msgs::Point traj_loc;
-        traj_loc = getPourTrajectory(t, 0, 3.14*3.0/4); // curr time, min angle, max angle
+        traj_loc = getPourTrajectory(t, 0, M_PI*3.0/4); // curr time, min angle, max angle
         cmdMsg = positionToJointAngles(traj_loc);
     }
 
-
     // Publish.
     cmdMsg.header.stamp = ros::Time::now();
+    // ROS_INFO_STREAM("command: " << cmdMsg << "\nFeedback: " << feedback_joint_state);
     // cmdPub.publish(cmdMsg);
     helper_p->goToJointState(cmdMsg);
     return true;
@@ -242,6 +269,7 @@ bool MobilitySrv::processRequest(Mobility::Request& req, Mobility::Response& res
     pouring = req.pouring_beer;
 
     joint_state_publisher.publish(joint_state);
+    service_ready = true;
 
     return true;
 }
@@ -250,63 +278,76 @@ int main(int argc, char **argv) {
     ros::init(argc, argv, "mobility_server");
     ros::start();
 
-    // Initialize the global variables before setting up the services.
-    prev_time = ros::Time::now();
-    for (int i = 0 ; i < 5 ; i++)
-    {
-        q[i]    = 0.0;
-        qdot[i] = 0.0;
-
-        a[i] = b[i] = c[i] = d[i] = 0.0;
-    }
-
-    feedback_joint_state.velocity.resize(num_joints);
-    feedback_joint_state.position.resize(num_joints);
-
     // Set up pub/sub
 
     ros::NodeHandle n;
 
-    // Set up service
-    MobilitySrv mobility;
-    ros::ServiceServer ss = n.advertiseService("mobility", &MobilitySrv::processRequest, &mobility);
+    // Get topic names
+    if (!n.getParam("current_pose_topic", current_pose_topic_name))
+    {
+      ROS_ERROR("target_gripper_state_topic param not specified");
+      return -1;
+    }
+    fkin_pub = n.advertise<geometry_msgs::PoseStamped>(
+            current_pose_topic_name, 10, &processFeedback);
+
+    ros::Subscriber feedback_subscriber =
+        n.subscribe(joint_state_feedback_name, 10,
+                              &processFeedback);
+
+    // Set up HEBI 
+    HebiHelper helper(n, "all", names, families);
+    helper_p = &helper;
+
+
+    ROS_INFO("Waiting for feedback");
+    // Wait until we have acquired a feedback
+    while (!feedback_ready && ros::ok()) {
+        ros::spinOnce();
+    }
+    ROS_INFO("Feedback acquired");
+
+
+    // Initialize the global variables before setting up the service.
+    prev_time = ros::Time::now();
+    for (int i = 0 ; i < 5 ; i++)
+    {
+        q[i]    = feedback_joint_state.position[i];
+        qdot[i] = 0;
+
+        a[i] = b[i] = c[i] = d[i] = 0.0;
+    }
+    // ROS_INFO_STREAM("feedback joints: " << feedback_joint_state);
+
+    // feedback_joint_state.velocity.resize(num_joints);
+    // feedback_joint_state.position.resize(num_joints);
 
     joint_state_publisher =
         n.advertise<sensor_msgs::JointState>(joint_state_name, 1);
 
-    // Get topic names
+    corrected_feedback_publisher =
+        n.advertise<sensor_msgs::JointState>("/corrected_feedback", 1);
+
+    // Set up the mobility service
+    MobilitySrv mobility;
+    ros::ServiceServer ss = n.advertiseService("mobility", &MobilitySrv::processRequest, &mobility);
 
     // if (!n.getParam("target_position_topic", target_subscriber_name))
     // {
     //   ROS_ERROR("target_gripper_state_topic param not specified");
     //   return -1;
     // }
-    if (!n.getParam("current_pose_topic", current_pose_topic_name))
-    {
-      ROS_ERROR("target_gripper_state_topic param not specified");
-      return -1;
-    }
 
     // ros::Subscriber target_subscriber =
     //     n.subscribe(target_subscriber_name, 10,
     //                           &processTargetState);
 
-    ros::Subscriber feedback_subscriber =
-        n.subscribe(joint_state_feedback_name, 10,
-                              &processFeedback);
-
-    fkin_pub = n.advertise<geometry_msgs::PoseStamped>(
-            current_pose_topic_name, 10, &processFeedback);
-
-    // Set up HEBI 
-    HebiHelper helper(n, "all", names, families);
-    helper_p = &helper;
-
     ROS_INFO("About to loop");
 
     // TODO: add back in loop rate?
     while(ros::ok()) {
-        followTrajectory();
+        if (service_ready)
+            followTrajectory();
         ros::spinOnce();
     }
     ros::shutdown();

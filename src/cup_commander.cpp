@@ -327,23 +327,23 @@ int main(int argc, char **argv) {
     current_pose_subscriber = nh.subscribe(current_pose_topic, 10,
         &processArmPose);
 
-    bar_bot::Mobility temp_mobility;
-    temp_mobility.request.pour_angle         = 0;
-    temp_mobility.request.is_blocking        = true;
-    temp_mobility.request.use_trajectory     = true;
-    temp_mobility.request.close_gripper      = false;
-    temp_mobility.request.move_time          = 4; // Seconds
+    // bar_bot::Mobility temp_mobility;
+    // temp_mobility.request.pour_angle         = 0;
+    // temp_mobility.request.is_blocking        = true;
+    // temp_mobility.request.use_trajectory     = true;
+    // temp_mobility.request.close_gripper      = false;
+    // temp_mobility.request.move_time          = 4; // Seconds
 
-    temp_mobility.request.target_loc.x = 0;
-    temp_mobility.request.target_loc.y = .5;
-    temp_mobility.request.target_loc.z = .3;
+    // temp_mobility.request.target_loc.x = 0;
+    // temp_mobility.request.target_loc.y = .5;
+    // temp_mobility.request.target_loc.z = .3;
 
-    ros::spinOnce();
-    if (mobility_client.call(temp_mobility)) {
-        ROS_ERROR("call successful!");
-    } else {
-        ROS_ERROR("call failed!");
-    }
+    // ros::spinOnce();
+    // if (mobility_client.call(temp_mobility)) {
+    //     ROS_ERROR("call successful!");
+    // } else {
+    //     ROS_ERROR("call failed!");
+    // }
 
     // Move back and forth
     bar_bot::Mobility mobility;
@@ -360,20 +360,24 @@ int main(int argc, char **argv) {
         mobility.request.target_loc.y = .5;
         mobility.request.target_loc.z = .3;
 
-        if (mobility_client.call(mobility)) {
+        mobility_client.call(mobility);
+        if (mobility.response.target_reached) {
             ROS_ERROR("call successful!");
         } else {
             ROS_ERROR("call failed!");
+            ros::Duration(2).sleep();
         }
 
         mobility.request.target_loc.x = .3;
         mobility.request.target_loc.y = .3;
         mobility.request.target_loc.z = .15;
 
-        if (mobility_client.call(mobility)) {
+        mobility_client.call(mobility);
+        if (mobility.response.target_reached) {
             ROS_ERROR("call successful!");
         } else {
             ROS_ERROR("call failed!");
+            ros::Duration(2).sleep();
         }
     }
 
