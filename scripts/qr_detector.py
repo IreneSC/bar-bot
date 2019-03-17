@@ -26,8 +26,8 @@ def process_images(depth_image, color_image):
     mask = hue_mask(color_image, 150, 5, 70, 250,50, 240)
     kernel = np.ones((5,5),np.uint8)
     mask = cv2.erode(mask,kernel,iterations = 1)
-    kernel = np.ones((5,5),np.uint8)
-    mask = cv2.dilate(mask,kernel,iterations = 4)
+    kernel = np.ones((15,15),np.uint8)
+    mask = cv2.dilate(mask,kernel,iterations = 3)
     color_image = cv2.bitwise_and(color_image,color_image,mask = mask)
 
     _, rois, hierarchy = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -39,14 +39,35 @@ def process_images(depth_image, color_image):
         x_min, x_max = max(np.amin(locs0)-margin,0), min(np.amax(locs0)+margin, roi_mask.shape[0])
         y_min, y_max = max(np.amin(locs1)-margin,0), min(np.amax(locs1)+margin, roi_mask.shape[1])
         cropped = color_image[x_min: x_max, y_min: y_max]
-        ret2,th2 = cv2.threshold(cv2.cvtColor(cropped, cv2.COLOR_BGR2GRAY),0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
-        decodedObjects, hulls = decode(th2)
+        cropped = cv2.cvtColor(cropped,cv2.COLOR_BGR2GRAY)
+        # cropped = adjust_gamma(cropped, gamma=0.5)
+        # cropped = cropped.astype('float64')
+        # cropped[cropped<int(255/2)]*=0.8
+        # cropped[cropped>int(255/2)]*=1.05
+        # cropped[cropped>255]=255
+        # cropped = cropped.astype('uint8')
+        # white_mask = cropped 255/2,255)
+        try:
+            white = int(np.mean(cropped[cropped>int(255/2)]))
+            cropped[cropped==0] = white
+        except ValueError:
+            pass
+
+        cropped = cv2.cvtColor(cropped,cv2.COLOR_GRAY2BGR)
+        # Big = cv2.resize(cropped, (0,0), fx=2, fy=2)
+        # ret2,th2 = cv2.threshold(cropped[:,:,1],0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+        # cropped = cv2.cvtColor(th2, cv2.COLOR_GRAY2BGR)
+        decodedObjects, hulls = decode(cv2.cvtColor(cropped,cv2.COLOR_BGR2GRAY))
+
         for obj, hull in zip(decodedObjects, hulls):
             n = len(hull)
+            center_x = 0
+            center_y = 0
             for j in range(0,n):
                 cv2.line(cropped, hull[j], hull[ (j+1) % n], (255,0,0), 3)
-            center = get_contour_centroid(hull)
-            center = (center[0] + x_min, center[1] + y_min)
+                center_x +=hull[j][0]/n
+                center_y +=hull[j][1]/n
+            center = (center_x + x_min, center_y+ y_min)
             if obj.data in detections:
                 detections[obj.data].append(center)
             else:

@@ -1,5 +1,5 @@
-import rospy
 import cv2
+import math
 import numpy as np
 from threading import Lock
 import pyrealsense2 as rs
@@ -211,3 +211,13 @@ def compare_rectangle(cnt, rect_cnt):
     for pt in rect_cnt:
         square_error += (cv2.pointPolygonTest(cnt,tuple(pt),True))**2
     return math.sqrt(square_error)
+
+def adjust_gamma(image, gamma=1.0):
+    # build a lookup table mapping the pixel values [0, 255] to
+    # their adjusted gamma values
+    invGamma = 1.0 / gamma
+    table = np.array([((i / 255.0) ** invGamma) * 255
+    	for i in np.arange(0, 256)]).astype("uint8")
+
+    # apply gamma correction using the lookup table
+    return cv2.LUT(image, table)

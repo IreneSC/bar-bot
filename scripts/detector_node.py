@@ -8,17 +8,17 @@ import pyrealsense2 as rs
 from helper import *
 
 from std_msgs.msg import String
-from geometry_msgs.msg import PointStamped, PoseStamped, PoseArray, Pose
+from geometry_msgs.msg import Point
 from sensor_msgs.msg import Image, JointState
 from cv_bridge import CvBridge, CvBridgeError
-from bar_bot import Detections
+from bar_bot.msg import Detections
 
 import cup_detector
 import qr_detector
 
 bridge = CvBridge()
 
-def merge_and_make_global(pixels_centers, aligned_depth_frame, depth_intrin, merging_dist=0.03):
+def merge_and_make_global(pixel_centers, aligned_depth_frame, depth_intrin, merging_dist=0.03):
     global_centers = []
     for (cx, cy) in pixel_centers:
         local = pixel_to_local3d(cx, cy, aligned_depth_frame, depth_intrin)
@@ -31,6 +31,7 @@ def merge_and_make_global(pixels_centers, aligned_depth_frame, depth_intrin, mer
                 break
         if not merged:
             global_centers.append(world)
+    return global_centers
 
 def track_objects(detections, global_centers, dist_error=0.08, delete_score = 0, min_score = 5, max_score = 15):
 
@@ -63,11 +64,11 @@ def track_objects(detections, global_centers, dist_error=0.08, delete_score = 0,
             continue
         if score >=min_score:
             center = det[len(det)-1]
-            scored_positions.append(score, Position(center[0], center[1], center[2]))
+            scored_positions.append((score, Point(center[0], center[1], center[2])))
         if score >max_score:
             detections[i] = max_score, det
     scored_positions.sort(key=lambda x: x[0])
-    if len(scored_positions>0):
+    if len(scored_positions)>0:
         return scored_positions[0][1], detections
     else:
         return None, detections
@@ -95,7 +96,7 @@ def main():
             for key in cup_detections:
                 if key not in global_detections:
                     global_detections[key] = []
-                global_centers = merge_and_make_global(cup_detections[key]), aligned_depth_frame, depth_intrin, merging_dist=0.03)
+                global_centers = merge_and_make_global(cup_detections[key], aligned_depth_frame, depth_intrin, merging_dist=0.03)
                 best_pos, global_detections[key] = track_objects(global_detections[key], global_centers, dist_error=0.08, delete_score = 0, min_score = 5, max_score = 15)
                 if best_pos is not None:
                     d.detection_types.append(key)
@@ -103,12 +104,12 @@ def main():
             for key in bottle_detections:
                 if key not in global_detections:
                     global_detections[key] = []
-                global_centers = merge_and_make_global(bottle_detections[key]), aligned_depth_frame, depth_intrin, merging_dist=0.03)
+                global_centers = merge_and_make_global(bottle_detections[key], aligned_depth_frame, depth_intrin, merging_dist=0.03)
                 best_pos, global_detections[key] = track_objects(global_detections[key], global_centers, dist_error=0.08, delete_score = -2, min_score = 0.5, max_score = 15)
                 if best_pos is not None:
                     d.detection_types.append(key)
                     d.detection_positions.append(best_pos)
-                    
+
             position_pub.publish(d)
             try:
                 cup_image_pub.publish(bridge.cv2_to_imgmsg(cup_result_img,"bgr8"))
