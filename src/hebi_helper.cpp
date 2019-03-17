@@ -108,8 +108,10 @@ void HebiHelper::goToJointState(sensor_msgs::JointState joints)
 #ifdef FLIP_PITCHES
     joints.position[1] = -joints.position[1];
     joints.position[2] = -joints.position[2];
-    joints.velocity[1] = -joints.velocity[1];
-    joints.velocity[2] = -joints.velocity[2];
+    if (joints.velocity.size() > 2) {
+        joints.velocity[1] = -joints.velocity[1];
+        joints.velocity[2] = -joints.velocity[2];
+    }
 #endif
     joints.position[4] = pour_angle;
     // ROS_INFO("Joint size: %d", joints.position.size());

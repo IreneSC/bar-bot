@@ -221,7 +221,7 @@ def process_images(detections):
         if score >max_score:
             detections[i] = max_score, det
 
-    print("num poses:", len(stamped_positions.poses))
+    # print("num poses:", len(stamped_positions.poses))
     position_pub.publish(stamped_positions)
 
 
@@ -387,7 +387,7 @@ def main():
         detections =[]
         while not rospy.is_shutdown():
             detections = process_images(detections)
-            print(detections)
+            # print(detections)
             # rospy.spinOnce()
 
     except KeyboardInterrupt:

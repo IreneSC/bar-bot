@@ -9,6 +9,7 @@ static ros::Publisher joint_state_publisher;
 static ros::Publisher corrected_feedback_publisher;
 static ros::Publisher fkin_pub;
 static volatile bool service_ready;
+static volatile double pour_angle;
 
 // HEBI info
 static const std::vector<std::string> families = {"Arm", "Arm", "Arm", "Arm", "Arm", "Arm"};
@@ -110,17 +111,17 @@ static void initTrajectory(const sensor_msgs::JointState& target_joints,
 
 // Handle feedback from hebi
 static void processFeedback(const sensor_msgs::JointState& joints) {
-    geometry_msgs::Point pt = jointAnglesToPosition(joints);
-    feedback_pose.pose.position = pt;
-    feedback_pose.header.stamp = ros::Time::now();
-    fkin_pub.publish(feedback_pose);
-    feedback_joint_state = joints;
-
     // Fix negatives
+    feedback_joint_state = joints;
     feedback_joint_state.position[1] = -feedback_joint_state.position[1];
     feedback_joint_state.position[2] = -feedback_joint_state.position[2];
     feedback_joint_state.velocity[1] = -feedback_joint_state.velocity[1];
     feedback_joint_state.velocity[2] = -feedback_joint_state.velocity[2];
+
+    geometry_msgs::Point pt = jointAnglesToPosition(feedback_joint_state);
+    feedback_pose.pose.position = pt;
+    feedback_pose.header.stamp = ros::Time::now();
+    fkin_pub.publish(feedback_pose);
 
     feedback_ready = true;
     // ROS_ERROR("Got feedback");
@@ -131,7 +132,7 @@ static void processFeedback(const sensor_msgs::JointState& joints) {
 // Block until we reach the target location target_loc
 // Return true if the target was reached
 static bool block(const geometry_msgs::Point& target_loc, double timeout_secs) {
-    static constexpr double max_dist = 0.15; // meters
+    static constexpr double max_dist = 0.05; // meters
     auto cur_time = ros::Time::now();
     while (!areWeThereYet(target_loc, max_dist) && (ros::Time::now() - cur_time).toSec() < timeout_secs) {
         ros::spinOnce();
@@ -141,8 +142,12 @@ static bool block(const geometry_msgs::Point& target_loc, double timeout_secs) {
         }
         usleep(100);
     }
-    ROS_INFO("distance off: %f", distance(target_loc, feedback_pose.pose.position));
-    return areWeThereYet(target_loc, max_dist);
+    ROS_INFO_STREAM("target_loc: " << target_loc << ", feedback: " << feedback_pose.pose.position);
+    ROS_INFO("distance off: %f, time taken: %f, timeout: %f",
+             distance(target_loc, feedback_pose.pose.position),
+             (ros::Time::now() - cur_time).toSec(),
+             timeout_secs);
+    return true; //areWeThereYet(target_loc, max_dist);
 }
 
 // Return false if a collission is detected.
@@ -158,7 +163,7 @@ static bool followTrajectory() {
         t = 0.0;
 
     // Max difference between actual and predicted speeds.
-    static constexpr double tolerance = .5;
+    static constexpr double tolerance = 100;
 
     // Compute the new position and velocity commands.
     if (!pouring) {
@@ -188,7 +193,10 @@ static bool followTrajectory() {
         }
     } else {
         geometry_msgs::Point traj_loc;
-        traj_loc = getPourTrajectory(t, 0, M_PI*3.0/4); // curr time, min angle, max angle
+        traj_loc = getPourTrajectory(t, 0, abs(pour_angle)); // curr time, min angle, max angle
+        ROS_INFO_STREAM("pour_loc: " << pour_pos_init <<
+                        ", traj_loc: " << traj_loc << 
+                        ", current loc: " << feedback_pose.pose.position);
         cmdMsg = positionToJointAngles(traj_loc);
     }
 
@@ -200,7 +208,7 @@ static bool followTrajectory() {
     return true;
 }
 
- 
+
 //   angles in rad
 static geometry_msgs::Point getPourTrajectory(double t, double beer_ang_init, double beer_ang_max) {
     t = t+t_f;
@@ -214,22 +222,23 @@ static geometry_msgs::Point getPourTrajectory(double t, double beer_ang_init, do
     double r = sqrt(x0*x0 + y0*y0);         // radius
 
     double beer_ang;                        // current desired angle of beer
-    if (t < t_f/2.0)    // half time to pour beer, half time to reset 
-        beer_ang = beer_ang_init + t/t_f*2 * beer_ang_max;    
+    if (t < t_f/2.0)    // half time to pour beer, half time to reset
+        beer_ang = beer_ang_init + (t/t_f) * 2 * (beer_ang_max - beer_ang_init);
     else
-        beer_ang = beer_ang_init + (t_f - t/t_f*2) * beer_ang_max;
+        beer_ang = beer_ang_init + ((t_f - t) / t_f) * 2 * (beer_ang_max - beer_ang_init);
+    helper_p->setPourAngle(-beer_ang);
 
     double ds = beer_nh * sin(beer_ang);          // horizontal offset from tipping bottle
     double base_ang_off = acos(1-(ds*ds)/(2*r*r));
 
-    double x1, y1, z1;                          // desired position 
+    double x1, y1, z1;                          // desired position
     if (beer_ang > 3.14/2)
         z1 = z0 +  beer_gh * cos(beer_ang);
     else
         z1 = z0;
 
-    x1 = -r*sin(base_ang_init + base_ang_off);    
-    y1 = r*cos(base_ang_init + base_ang_off);
+    x1 = r*cos(base_ang_init - base_ang_off);
+    y1 = r*sin(base_ang_init - base_ang_off);
 
     geometry_msgs::Point ptmsg;
     ptmsg.x = x1;
@@ -248,18 +257,18 @@ bool MobilitySrv::processRequest(Mobility::Request& req, Mobility::Response& res
     res.target_reached = true;
 
     helper_p->setGripperClosed(req.close_gripper);
-    helper_p->setPourAngle(req.pour_angle);
+    if (!req.pouring_beer)
+        helper_p->setPourAngle(req.pour_angle);
+    else
+        pour_angle = req.pour_angle;
 
     // If use trajectory is false, it just sets the "time to move" to 0 seconds
     initTrajectory(joint_state, req.use_trajectory, req.move_time);
 
-    if (req.is_blocking) {
-        res.target_reached = block(req.target_loc, req.move_time * 1.5);
-    }
-
     if (!pouring) {
         pouring = req.pouring_beer;
         if (pouring) {
+            ROS_INFO("Pouring is now true!");
             t_f = req.move_time;
             pour_pos_init = feedback_pose.pose.position;
             beer_nh = req.beer_nh;
@@ -267,6 +276,10 @@ bool MobilitySrv::processRequest(Mobility::Request& req, Mobility::Response& res
         }
     }
     pouring = req.pouring_beer;
+
+    if (req.is_blocking) {
+        res.target_reached = block(req.target_loc, req.move_time * 1.5);
+    }
 
     joint_state_publisher.publish(joint_state);
     service_ready = true;
@@ -295,7 +308,7 @@ int main(int argc, char **argv) {
         n.subscribe(joint_state_feedback_name, 10,
                               &processFeedback);
 
-    // Set up HEBI 
+    // Set up HEBI
     HebiHelper helper(n, "all", names, families);
     helper_p = &helper;
 
