@@ -16,6 +16,13 @@ static geometry_msgs::PoseStamped feedback_pose;
 static sensor_msgs::JointState  feedback_joint_state;
 
 // Stuff for handling trajectories
+static bool pouring = false;
+
+// Pouring beer
+static double beer_nh;
+static double beer_gh;
+static geometry_msgs::Point pour_pos_init;
+
 
 // Time
 static ros::Time prev_time;
@@ -39,6 +46,7 @@ static double distance(const geometry_msgs::Point& p1, const geometry_msgs::Poin
 static bool areWeThereYet(const geometry_msgs::PointStamped& target_loc, double dist);
 static void initTrajectory(const sensor_msgs::JointState& target_joints, const bool use_cubic_spline, const double min_time);
 static bool followTrajectory();
+static geometry_msgs::Point getPourTrajectory(double t, double beer_ang_init, double beer_ang_max);
 // static void processTargetState(const geometry_msgs::PointStamped& target_loc);
 static void processFeedback(const sensor_msgs::JointState& joints);
 static bool block(const geometry_msgs::Point& target_loc, double timeout_secs);
@@ -135,21 +143,28 @@ static bool followTrajectory() {
     static constexpr double tolerance = 1;
 
     // Compute the new position and velocity commands.
-    for (int i = 0 ; i < num_joints ; i++)
-    {
-        q[i]    = a[i]+t*(b[i]+t*(c[i]+t*d[i]));
-        qdot[i] = b[i]+t*(2.0*c[i]+t*3.0*d[i]);
+    if (!pouring) {
+        for (int i = 0 ; i < num_joints ; i++)
+        {
+            q[i]    = a[i]+t*(b[i]+t*(c[i]+t*d[i]));
+            qdot[i] = b[i]+t*(2.0*c[i]+t*3.0*d[i]);
 
-        cmdMsg.position[i] = q[i];
-        cmdMsg.velocity[i] = qdot[i];
-        if (abs(qdot[i] - feedback_joint_state.velocity[i]) > tolerance) {
-            ROS_ERROR("Collision detected on joint %d! Qdot: %f, feedback: %f, delta: %f",
-                      i, qdot[i], feedback_joint_state.velocity[i],
-                      abs(qdot[i] - feedback_joint_state.velocity[i]));
-            // helper_p->goToJointState(feedback_joint_state);
-            return false;
+            cmdMsg.position[i] = q[i];
+            cmdMsg.velocity[i] = qdot[i];
+            if (abs(qdot[i] - feedback_joint_state.velocity[i]) > tolerance) {
+                ROS_ERROR("Collision detected on joint %d! Qdot: %f, feedback: %f, delta: %f",
+                          i, qdot[i], feedback_joint_state.velocity[i],
+                          abs(qdot[i] - feedback_joint_state.velocity[i]));
+                // helper_p->goToJointState(feedback_joint_state);
+                return false;
+            }
         }
+    } else {
+        geometry_msgs::Point traj_loc;
+        traj_loc = getPourTrajectory(t, 0, 3.14*3.0/4); // curr time, min angle, max angle
+        cmdMsg = positionToJointAngles(traj_loc);
     }
+
 
     // Publish.
     cmdMsg.header.stamp = ros::Time::now();
@@ -158,28 +173,34 @@ static bool followTrajectory() {
     return true;
 }
 
-// return NULL if trajectory finished
-/* initial position pos0; 
-   current time/pour time t/t_max; 
-   angle to pour beer to beer_ang_max in rad; 
-   beer neck height offset from gripper beer_heignt in same units as pos0
-*/
-static geometry_msgs::Point getPourTrajectory(geometry_msgs::Point::ConstPtr& pos0, double t, double t_max, double beer_ang_max, double beer_h) {
-    if (t >= t_max) t=t_max;
+ 
+//   angles in rad
+static geometry_msgs::Point getPourTrajectory(double t, double beer_ang_init, double beer_ang_max) {
+    t = t+t_f;
+    if (t >= t_f) t=t_f;
 
-    double x0 = pos0->x;
-    double y0 = pos0->y;
-    double z0 = pos0->z;
+    double x0 = pour_pos_init.x;
+    double y0 = pour_pos_init.y;
+    double z0 = pour_pos_init.z;
 
     double base_ang_init = atan2(y0,x0);    // original base angle
     double r = sqrt(x0*x0 + y0*y0);         // radius
 
-    double beer_ang = t/t_max * beer_ang_max;    // current angle of beer
-    double ds = beer_h * sin(beer_ang);          // horizontal offset from tipping bottle
+    double beer_ang;                        // current desired angle of beer
+    if (t < t_f/2.0)    // half time to pour beer, half time to reset 
+        beer_ang = beer_ang_init + t/t_f*2 * beer_ang_max;    
+    else
+        beer_ang = beer_ang_init + (t_f - t/t_f*2) * beer_ang_max;
+
+    double ds = beer_nh * sin(beer_ang);          // horizontal offset from tipping bottle
     double base_ang_off = acos(1-(ds*ds)/(2*r*r));
 
     double x1, y1, z1;                          // desired position 
-    z1 = z0 + beer_h * (1 - cos(beer_ang));
+    if (beer_ang > 3.14/2)
+        z1 = z0 +  beer_gh * cos(beer_ang);
+    else
+        z1 = z0;
+
     x1 = -r*sin(base_ang_init + base_ang_off);    
     y1 = r*cos(base_ang_init + base_ang_off);
 
@@ -208,6 +229,17 @@ bool MobilitySrv::processRequest(Mobility::Request& req, Mobility::Response& res
     if (req.is_blocking) {
         res.target_reached = block(req.target_loc, req.move_time * 1.5);
     }
+
+    if (!pouring) {
+        pouring = req.pouring_beer;
+        if (pouring) {
+            t_f = req.move_time;
+            pour_pos_init = feedback_pose.pose.position;
+            beer_nh = req.beer_nh;
+            beer_gh = req.beer_gh;
+        }
+    }
+    pouring = req.pouring_beer;
 
     joint_state_publisher.publish(joint_state);
 
