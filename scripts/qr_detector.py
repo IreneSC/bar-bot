@@ -46,6 +46,7 @@ def process_images(depth_image, color_image):
             for j in range(0,n):
                 cv2.line(cropped, hull[j], hull[ (j+1) % n], (255,0,0), 3)
             center = get_contour_centroid(hull)
+            center = (center[0] + x_min, center[1] + y_min)
             if obj.data in detections:
                 detections[obj.data].append(center)
             else:
@@ -54,39 +55,3 @@ def process_images(depth_image, color_image):
         color_image[x_min: x_max, y_min: y_max] = cropped
 
     return detections, color_image
-
-
-def main():
-    try:
-        rospy.init_node("cup_boi")
-
-        # Subscribers
-        # bgr_sub = rospy.Subscriber("/camera/color/image_raw", Image, bgr_img_callback)
-        # depth_sub = rospy.Subscriber("TODO", Image, bgr_img_callback)
-
-        # # Synchronize the subscribers
-        # time_sync = message_filters.TimeSynchronizer([bgr_sub, depth_sub], 1)
-        # ts.registerCallback(image_callback)
-
-        # Publishers
-        image_pub = rospy.Publisher(
-                rospy.get_param("processed_image_topic"), Image, queue_size=10)
-
-        position_pub = rospy.Publisher("/bar_bot/qr_multidetections", PoseArray, queue_size=10)
-        joint_state_feedback_sub = rospy.Subscriber("/hebiros/all/feedback/joint_state", JointState, joint_state_feedback_callback)
-
-        init_realsense()
-
-        detections ={}
-        while not rospy.is_shutdown():
-            detections = process_images(detections)
-            #print(detections)
-            # rospy.spinOnce()
-
-    except KeyboardInterrupt:
-        print("Shutting down")
-        cv2.destroyAllWindows()
-
-
-if __name__ == '__main__':
-    main()
