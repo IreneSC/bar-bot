@@ -158,6 +158,39 @@ static bool followTrajectory() {
     return true;
 }
 
+// return NULL if trajectory finished
+/* initial position pos0; 
+   current time/pour time t/t_max; 
+   angle to pour beer to beer_ang_max in rad; 
+   beer neck height offset from gripper beer_heignt in same units as pos0
+*/
+static geometry_msgs::Point getPourTrajectory(geometry_msgs::Point::ConstPtr& pos0, double t, double t_max, double beer_ang_max, double beer_h) {
+    if (t >= t_max) t=t_max;
+
+    double x0 = pos0->x;
+    double y0 = pos0->y;
+    double z0 = pos0->z;
+
+    double base_ang_init = atan2(y0,x0);    // original base angle
+    double r = sqrt(x0*x0 + y0*y0);         // radius
+
+    double beer_ang = t/t_max * beer_ang_max;    // current angle of beer
+    double ds = beer_h * sin(beer_ang);          // horizontal offset from tipping bottle
+    double base_ang_off = acos(1-(ds*ds)/(2*r*r));
+
+    double x1, y1, z1;                          // desired position 
+    z1 = z0 + beer_h * (1 - cos(beer_ang));
+    x1 = -r*sin(base_ang_init + base_ang_off);    
+    y1 = r*cos(base_ang_init + base_ang_off);
+
+    geometry_msgs::Point ptmsg;
+    ptmsg.x = x1;
+    ptmsg.y = y1;
+    ptmsg.z = z1;
+
+    return ptmsg;
+}
+
 // Processes a request to move to some pose
 bool MobilitySrv::processRequest(Mobility::Request& req, Mobility::Response& res) {
     // Parse the message into a joint state
