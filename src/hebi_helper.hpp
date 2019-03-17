@@ -14,9 +14,9 @@ class HebiHelper{
 
 private:
     // ros::NodeHandle n;
-    // sensor_msgs::JointState feedback;       // The actuator feedback struccture
-    bool   gripper_closed = false;          // Gripper state
-    double pour_angle = 0;                  // Gripper roll
+    // sensor_msgs::JointState feedback;        // The actuator feedback struccture
+    double gripper_angle    = 0;                // Gripper state
+    double pour_angle       = 0;                // Gripper roll
 
     std::string group_name;
     std::vector<std::string> names;
@@ -39,16 +39,16 @@ public:
         const std::vector<std::string>& families);
 
     // const inline sensor_msgs::JointState getFeedback() { return feedback; }
-    bool setGripperClosed(bool is_closed); // Returns previous value
+    // double setGripperAngle(double angle); // Returns previous value
 
     double setPourAngle(double angle); // Returns previous value
 
-    inline bool getGripperClosed() { return gripper_closed; }
+    // inline bool getGripperClosed() { return abs(gripper_angle) < 0.05; } // 0 = closed
 
     void goToJointState(sensor_msgs::JointState joints);
 };
 
 // Gripper boundaries, {min, max}
-static double gripbound[2] = {-1.0, 0};
+static double gripbound[2] = {-1, 0};
 
 #endif /** #ifndef __HEBI_HELPER__ **/

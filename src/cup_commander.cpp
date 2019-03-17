@@ -30,6 +30,9 @@ static const float scanning_limit_right = -2 * M_PI/3.0;//rad
 static ros::Time last_cup_detection(0);
 static ros::Duration detection_expiration(1.0);
 
+static geometry_msgs::Point end_point;
+
+static void moveWithFailureChecking(bar_bot::Mobility mobility);
 
 void processCupPoses(const geometry_msgs::PoseArray& cup_positions) {
     cup_pose_array = cup_positions;
@@ -78,28 +81,24 @@ static geometry_msgs::Point furthestPointFromTip() {
 }
 
 static void pourCups() {
-    ros::Rate loop_rate(5);
-
     // Move above the cup
     bar_bot::Mobility mobility;
+    mobility.request.pour_angle         = 0;
+    mobility.request.is_blocking        = true;
+    mobility.request.use_trajectory     = true;
+    static constexpr double z_offset    = .15;
+
     while(ros::ok()){
         ros::spinOnce();
-        loop_rate.sleep();
         if (cup_pose_array.poses.size() > 0) {
             mobility.request.target_loc         = cup_pose_array.poses[0].position;
-            mobility.request.pour_angle         = 0;
-            mobility.request.is_blocking        = true;
-            mobility.request.use_trajectory     = true;
             mobility.request.close_gripper      = false;
-            mobility.request.move_time          = 2.5; // Seconds
+            mobility.request.move_time          = 1.2; // Seconds
 
-            mobility.request.target_loc.z += .2;
-            if (mobility_client.call(mobility)) {
-                ROS_ERROR("call successful!");
-            } else {
-                ROS_ERROR("call failed!");
-            }
-            // waitForNewCups();
+            mobility.request.target_loc.x *= .985;
+            mobility.request.target_loc.y *= .985;
+            mobility.request.target_loc.z += .3;
+            moveWithFailureChecking(mobility);
             break;
         }
     }
@@ -110,46 +109,30 @@ static void pourCups() {
         if (cup_pose_array.poses.size() > 0) {
             saved_pos                           = cup_pose_array.poses[0].position;
             mobility.request.target_loc         = saved_pos;
-            mobility.request.pour_angle         = 0;
-            mobility.request.is_blocking        = true;
-            mobility.request.use_trajectory     = true;
             mobility.request.close_gripper      = false;
-            mobility.request.move_time          = 1.5; // Seconds
+            mobility.request.move_time          = 0.75; // Seconds
 
             mobility.request.target_loc.x *= .945;
             mobility.request.target_loc.y *= .945;
-            if (mobility_client.call(mobility)) {
-                ROS_ERROR("call successful!");
-            } else {
-                ROS_ERROR("call failed!");
-            }
+            mobility.request.target_loc.z += z_offset;
+            moveWithFailureChecking(mobility);
             break;
         }
         ros::spinOnce();
-        loop_rate.sleep();
     }
 
     // Move into the cup
     while(ros::ok()){
         ros::spinOnce();
-        loop_rate.sleep();
-        // if (cup_pose_array.poses.size() > 0) {
-            mobility.request.target_loc         = saved_pos;
-            mobility.request.pour_angle         = 0;
-            mobility.request.is_blocking        = true;
-            mobility.request.use_trajectory     = true;
-            mobility.request.close_gripper      = false;
-            mobility.request.move_time          = 1.5; // Seconds
+        mobility.request.target_loc         = saved_pos;
+        mobility.request.close_gripper      = false;
+        mobility.request.move_time          = 1.2; // Seconds
 
-            mobility.request.target_loc.x *= 1.1;
-            mobility.request.target_loc.y *= 1.1;
-            if (mobility_client.call(mobility)) {
-                ROS_ERROR("call successful!");
-            } else {
-                ROS_ERROR("call failed!");
-            }
-            break;
-        // }
+        mobility.request.target_loc.x *= 1.05;
+        mobility.request.target_loc.y *= 1.05;
+        mobility.request.target_loc.z += z_offset;
+        moveWithFailureChecking(mobility);
+        break;
     }
     // waitForNewCups();
 
@@ -157,69 +140,43 @@ static void pourCups() {
     // bar_bot::Mobility mobility;
     while(ros::ok()){
         ros::spinOnce();
-        loop_rate.sleep();
-        // if (cup_pose_array.poses.size() > 0) {
-            mobility.request.target_loc         = saved_pos;
-            mobility.request.pour_angle         = 0;
-            mobility.request.is_blocking        = true;
-            mobility.request.use_trajectory     = false;
-            mobility.request.close_gripper      = true;
-            mobility.request.move_time          = 1.5; // Seconds
+        mobility.request.target_loc         = saved_pos;
+        mobility.request.use_trajectory     = false;
+        mobility.request.close_gripper      = true;
+        mobility.request.move_time          = .7; // Seconds
 
-            mobility.request.target_loc.x *= 1.1;
-            mobility.request.target_loc.y *= 1.1;
-            if (mobility_client.call(mobility)) {
-                ROS_ERROR("call successful!");
-            } else {
-                ROS_ERROR("call failed!");
-            }
-            break;
-        // }
+        mobility.request.target_loc.x *= 1.05;
+        mobility.request.target_loc.y *= 1.05;
+        mobility.request.target_loc.z += z_offset;
+        moveWithFailureChecking(mobility);
+        break;
     }
+
+    mobility.request.use_trajectory     = true;
 
     // Pick up the cup
     while(ros::ok()){
         ros::spinOnce();
-        loop_rate.sleep();
-        // if (cup_pose_array.poses.size() > 0) {
-            mobility.request.target_loc         = saved_pos;
-            mobility.request.pour_angle         = 0;
-            mobility.request.is_blocking        = true;
-            mobility.request.use_trajectory     = true;
-            mobility.request.close_gripper      = true;
-            mobility.request.move_time          = 1.5; // Seconds
+        mobility.request.target_loc         = saved_pos;
+        mobility.request.close_gripper      = true;
+        mobility.request.move_time          = .75; // Seconds
 
-            mobility.request.target_loc.z = 0.3;
-            if (mobility_client.call(mobility)) {
-                ROS_ERROR("call successful!");
-            } else {
-                ROS_ERROR("call failed!");
-            }
-            break;
-        // }
+        mobility.request.target_loc.z = 0.3;
+        moveWithFailureChecking(mobility);
+        break;
     }
 
     // Move to above other cup
     while(ros::ok()){
         ros::spinOnce();
-        loop_rate.sleep();
         if (cup_pose_array.poses.size() > 0) {
             auto target                         = furthestPointFromTip();
             mobility.request.target_loc         = target;
-            mobility.request.pour_angle         = 0;
-            mobility.request.is_blocking        = true;
-            mobility.request.use_trajectory     = true;
             mobility.request.close_gripper      = true;
-            mobility.request.move_time          = 1.5; // Seconds
+            mobility.request.move_time          = 1; // Seconds
 
-            mobility.request.target_loc.x *= 1.09;
-            mobility.request.target_loc.y *= 1.09;
-            mobility.request.target_loc.z = 0.35;
-            if (mobility_client.call(mobility)) {
-                ROS_ERROR("call successful!");
-            } else {
-                ROS_ERROR("call failed!");
-            }
+            mobility.request.target_loc.z = 0.335;
+            moveWithFailureChecking(mobility);
             break;
         }
     }
@@ -229,52 +186,64 @@ static void pourCups() {
         if (cup_pose_array.poses.size() > 0) {
             auto target                         = furthestPointFromTip();
             mobility.request.target_loc         = target;
-            mobility.request.pour_angle         = -3.14;
-            mobility.request.is_blocking        = true;
-            mobility.request.use_trajectory     = true;
+            mobility.request.pour_angle         = M_PI*3.0/4;
             mobility.request.close_gripper      = true;
-            mobility.request.move_time          = 5; // Seconds
+            mobility.request.move_time          = 4.25; // Seconds
             mobility.request.pouring_beer       = true;
-            mobility.request.beer_nh            = 0.07;
+            mobility.request.beer_nh            = 0.09;
             mobility.request.beer_gh            = 0.05;
 
-            mobility.request.target_loc.x *= 1.090;
-            mobility.request.target_loc.y *= 1.090;
-            mobility.request.target_loc.z = 0.35;
-            if (mobility_client.call(mobility)) {
-                ROS_ERROR("call successful!");
-            } else {
-                ROS_ERROR("call failed!");
-            }
+            mobility.request.target_loc.z = 0.335;
+            moveWithFailureChecking(mobility);
             break;
         }
-        ros::spinOnce();
-        loop_rate.sleep();
+        // ros::spinOnce();
+        // loop_rate.sleep();
     }
 
-    while(ros::ok()){
-        ROS_ERROR("size: %d", cup_pose_array.poses.size());
-        if (cup_pose_array.poses.size() > 0) {
-            // saved_pos                           = cup_pose_array.poses[0].position;
-            mobility.request.target_loc         = furthestPointFromTip();
-            mobility.request.pour_angle         = 0;
-            mobility.request.is_blocking        = true;
-            mobility.request.use_trajectory     = true;
-            mobility.request.close_gripper      = true;
-            mobility.request.move_time          = 0.5; // Seconds
-            mobility.request.pouring_beer       = false;
+    // Reset to default values
+    mobility.request.pour_angle         = 0;
+    mobility.request.pouring_beer       = false;
+    mobility.request.beer_nh            = 0;
+    mobility.request.beer_gh            = 0;
 
-            mobility.request.target_loc.x *= 1.09;
-            mobility.request.target_loc.y *= 1.09;
-            mobility.request.target_loc.z = 0.35;
-            if (mobility_client.call(mobility)) {
-                ROS_ERROR("call successful!");
-            } else {
-                ROS_ERROR("call failed!");
-            }
-        }
-        ros::spinOnce();
-        loop_rate.sleep();
+    // Put it back down.
+    while(ros::ok()){
+        // ros::spinOnce();
+        ROS_ERROR("size: %d", (int)cup_pose_array.poses.size());
+        mobility.request.target_loc         = end_point; // furthestPointFromTip();
+        mobility.request.close_gripper      = true;
+        mobility.request.move_time          = 1; // Seconds
+
+        mobility.request.target_loc.z = 0.275;
+        moveWithFailureChecking(mobility);
+        break;
+    }
+
+    // All the way to the ground
+    while(ros::ok()){
+        // ros::spinOnce();
+        mobility.request.target_loc         = end_point; // furthestPointFromTip();
+        mobility.request.close_gripper      = true;
+        mobility.request.move_time          = 1.35; // Seconds
+
+        mobility.request.target_loc.z = 0.05;
+        moveWithFailureChecking(mobility);
+
+        break;
+    }
+
+    ros::Duration(1).sleep();
+
+    // Release! I said, release boy!
+    while(ros::ok()){
+        // ros::spinOnce();
+        mobility.request.target_loc         = end_point; // furthestPointFromTip();
+        mobility.request.close_gripper      = false;
+        mobility.request.move_time          = 5; // Seconds
+
+        mobility.request.target_loc.z = 0.05;
+        moveWithFailureChecking(mobility);
     }
 
 }
@@ -283,23 +252,20 @@ static void trackCups() {
     ros::Rate loop_rate(2);
     bar_bot::Mobility mobility;
     while(ros::ok()){
-        ROS_ERROR("size: %d", cup_pose_array.poses.size());
+        ROS_ERROR("size: %d", (int)cup_pose_array.poses.size());
         if (cup_pose_array.poses.size() > 0) {
             // saved_pos                           = cup_pose_array.poses[0].position;
             mobility.request.target_loc         = cup_pose_array.poses[0].position;
             mobility.request.pour_angle         = 0;
             mobility.request.is_blocking        = true;
-            mobility.request.use_trajectory     = false;
+            mobility.request.use_trajectory     = true;
             mobility.request.close_gripper      = false;
-            mobility.request.move_time          = 0.75; // Seconds
+            mobility.request.move_time          = 1.5; // Seconds
             mobility.request.pouring_beer       = false;
 
-            mobility.request.target_loc.z = 0.35;
-            if (mobility_client.call(mobility)) {
-                ROS_ERROR("call successful!");
-            } else {
-                ROS_ERROR("call failed!");
-            }
+            mobility.request.target_loc.z = 0.15;
+
+            moveWithFailureChecking(mobility);
         }
         ros::spinOnce();
         loop_rate.sleep();
@@ -323,25 +289,13 @@ static void backAndForth() {
         mobility.request.target_loc.y = .5;
         mobility.request.target_loc.z = .3;
 
-        mobility_client.call(mobility);
-        if (mobility.response.target_reached) {
-            ROS_ERROR("call successful!");
-        } else {
-            ROS_ERROR("call failed!");
-            ros::Duration(2).sleep();
-        }
+        moveWithFailureChecking(mobility);
 
         mobility.request.target_loc.x = .3;
         mobility.request.target_loc.y = .3;
         mobility.request.target_loc.z = .15;
 
-        mobility_client.call(mobility);
-        if (mobility.response.target_reached) {
-            ROS_ERROR("call successful!");
-        } else {
-            ROS_ERROR("call failed!");
-            ros::Duration(2).sleep();
-        }
+        moveWithFailureChecking(mobility);
     }
 }
 
@@ -363,13 +317,25 @@ static void pourBeer() {
         mobility.request.target_loc.x = 0;
         mobility.request.target_loc.y = 0.5;
         mobility.request.target_loc.z = 0.4;
-        if (mobility_client.call(mobility)) {
-            ROS_ERROR("call successful!");
-        } else {
-            ROS_ERROR("call failed!");
-        }
+
+        moveWithFailureChecking(mobility);
+
         ros::spinOnce();
         loop_rate.sleep();
+    }
+}
+
+static void moveWithFailureChecking(bar_bot::Mobility mobility) {
+    while (true) {
+        mobility.response.target_reached = false;
+        mobility_client.call(mobility);
+        if (mobility.response.target_reached) {
+            ROS_INFO("call successful!");
+            break;
+        } else {
+            ROS_INFO("call failed!");
+            ros::Duration(2).sleep();
+        }
     }
 }
 
@@ -385,6 +351,11 @@ int main(int argc, char **argv) {
     last_arm_pos.point.x = .3;
     last_arm_pos.point.y = 0;
     last_arm_pos.point.z = .1;
+
+    end_point.x = -.06;
+    end_point.y = .74;
+    end_point.z = 0.05;
+
     // cup_pose_array = geometry_msgs::PointStamped();
     // cup_pose_array.point.x = .3;
     // cup_pose_array.point.y = 0;
@@ -437,17 +408,21 @@ int main(int argc, char **argv) {
     temp_mobility.request.target_loc.z = .35;
 
     ros::spinOnce();
-    while (!mobility_client.call(temp_mobility) || !temp_mobility.response.target_reached) {
-        ros::spinOnce();
+    while (true) {
+        temp_mobility.response.target_reached = false;
+        mobility_client.call(temp_mobility); 
+        if(temp_mobility.response.target_reached)
+            break;
+        ros::Duration(2).sleep();
         ROS_ERROR_THROTTLE(1, "call failed!");
     }
     ROS_ERROR("call succeeded!");
     // mobility_client.call(temp_mobility);
 
-    // pourCups();
+    pourCups();
     // backAndForth();
     // trackCups();
-    pourBeer();
+    // pourBeer();
 
     ros::shutdown();
 

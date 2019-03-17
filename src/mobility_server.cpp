@@ -14,6 +14,7 @@ static volatile double pour_angle;
 // HEBI info
 static const std::vector<std::string> families = {"Arm", "Arm", "Arm", "Arm", "Arm", "Arm"};
 static const std::vector<std::string> names  = {"base", "pitch_1", "pitch_2", "pitch_3", "wrist", "gripper"};
+static constexpr int gripper_index = 5;
 static HebiHelper* helper_p;
 static volatile bool feedback_ready;
 static geometry_msgs::PoseStamped feedback_pose;
@@ -40,7 +41,7 @@ static double  qdot[num_joints];
 static double  a[num_joints], b[num_joints], c[num_joints], d[num_joints];
 
 // Max speeds.
-static double  qdotmax[num_joints] = {.8, .8, .8, .8, .8};
+static double  qdotmax[num_joints] = {.8, .8, .8, .8, .8, .33};
 
 // static double default_pos[num_joints] = {0, 0.785, -1.57, -0.785, 0};
 
@@ -81,6 +82,7 @@ static void initTrajectory(const sensor_msgs::JointState& target_joints,
     int     i;
     double  tmove;        // Total move time
     double  tmp;
+    static constexpr double max_time = 7; // No more than seven seconds.
 
     // Pick a move time.  Note this is approximate.  We could compute
     // the absolute fastest time or pass as an argument.
@@ -91,6 +93,7 @@ static void initTrajectory(const sensor_msgs::JointState& target_joints,
         if (tmp > tmove)
             tmove = tmp;
     }
+    tmove = max_time < tmove ? max_time : tmove;
 
     // Set the cubic spline parameters.
     for (i = 0 ; i < num_joints ; i++)
@@ -142,11 +145,13 @@ static bool block(const geometry_msgs::Point& target_loc, double timeout_secs) {
         }
         usleep(100);
     }
-    ROS_INFO_STREAM("target_loc: " << target_loc << ", feedback: " << feedback_pose.pose.position);
+    // ROS_INFO_STREAM("target_loc: " << target_loc << ", feedback: " << feedback_pose.pose.position);
     ROS_INFO("distance off: %f, time taken: %f, timeout: %f",
              distance(target_loc, feedback_pose.pose.position),
              (ros::Time::now() - cur_time).toSec(),
              timeout_secs);
+    ROS_INFO_STREAM("target: " << target_loc << ", current: " << feedback_pose.pose.position);
+
     return true; //areWeThereYet(target_loc, max_dist);
 }
 
@@ -163,7 +168,7 @@ static bool followTrajectory() {
         t = 0.0;
 
     // Max difference between actual and predicted speeds.
-    static constexpr double tolerance = 100;
+    static constexpr double tolerance = .5;
 
     // Compute the new position and velocity commands.
     if (!pouring) {
@@ -194,10 +199,14 @@ static bool followTrajectory() {
     } else {
         geometry_msgs::Point traj_loc;
         traj_loc = getPourTrajectory(t, 0, abs(pour_angle)); // curr time, min angle, max angle
-        ROS_INFO_STREAM("pour_loc: " << pour_pos_init <<
-                        ", traj_loc: " << traj_loc << 
-                        ", current loc: " << feedback_pose.pose.position);
-        cmdMsg = positionToJointAngles(traj_loc);
+        // ROS_INFO_STREAM("pour_loc: " << pour_pos_init <<
+                        // ", traj_loc: " << traj_loc << 
+                        // ", current loc: " << feedback_pose.pose.position);
+
+        cmdMsg             = positionToJointAngles(traj_loc);
+        // Set the gripper position regardless
+        q[5]               = a[5]+t*(b[5]+t*(c[5]+t*d[5]));
+        cmdMsg.position[5] = q[5];
     }
 
     // Publish.
@@ -248,17 +257,6 @@ static geometry_msgs::Point getPourTrajectory(double t, double beer_ang_init, do
     return ptmsg;
 }
 
-
-// checks if cup has been grabbed
-bool isCupGrabbed() {
-    if (helper_p->getGripperClosed()) {
-        double grip_angle = feedback_joint_state.position[5];
-        if (grip_angle != gripbound[0])
-            return true;
-    }
-    return false;
-}
-
 // Processes a request to move to some pose
 bool MobilitySrv::processRequest(Mobility::Request& req, Mobility::Response& res) {
     // Parse the message into a joint state
@@ -267,7 +265,11 @@ bool MobilitySrv::processRequest(Mobility::Request& req, Mobility::Response& res
     joint_state.name = joint_names;
     res.target_reached = true;
 
-    helper_p->setGripperClosed(req.close_gripper);
+    if(req.close_gripper)
+        joint_state.position[gripper_index] = -.8;
+    else
+        joint_state.position[gripper_index] = 0;
+
     if (!req.pouring_beer)
         helper_p->setPourAngle(req.pour_angle);
     else
@@ -281,7 +283,7 @@ bool MobilitySrv::processRequest(Mobility::Request& req, Mobility::Response& res
         if (pouring) {
             ROS_INFO("Pouring is now true!");
             t_f = req.move_time;
-            pour_pos_init = feedback_pose.pose.position;
+            pour_pos_init = req.target_loc;
             beer_nh = req.beer_nh;
             beer_gh = req.beer_gh;
         }

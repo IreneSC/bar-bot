@@ -87,11 +87,11 @@ void HebiHelper::setupGroup(ros::NodeHandle n){
 // }
 
 // Returns previous value
-bool HebiHelper::setGripperClosed(bool is_closed) {
-    bool prev = gripper_closed;
-    gripper_closed = is_closed;
-    return prev;
-}
+// double HebiHelper::setGripperAngle(double angle) {
+//     double prev = gripper_angle;
+//     gripper_angle = angle;
+//     return prev;
+// }
 
 // Returns previous value
 double HebiHelper::setPourAngle(double angle) {
@@ -115,12 +115,6 @@ void HebiHelper::goToJointState(sensor_msgs::JointState joints)
     }
 #endif
     joints.position[4] = pour_angle;
-    // ROS_INFO("Joint size: %d", joints.position.size());
-    if (gripper_closed) {
-        joints.position.push_back(gripbound[0]);
-    } else {
-        joints.position.push_back(gripbound[1]);
-    }
 
     joints.name = names;
     command_publisher.publish(joints);

@@ -10,9 +10,8 @@ static const std::vector<std::string> joint_names = {"z_rotate", "pitch_1", "pit
 static constexpr double d1 = .11;
 static constexpr double d2 = .445; // .445
 static constexpr double d3 = .395; // .40 // .463
-static constexpr double d4 = .14;
-constexpr int num_joints = 5;
-
+static constexpr double d4 = .09;
+constexpr int num_joints = 6;
 
 using namespace Eigen;
 
