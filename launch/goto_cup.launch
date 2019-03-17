@@ -9,14 +9,23 @@
 
     <!-- Camera -->
     <!-- <include file="$(find realsense2_camera)/launch/rs_camera.launch"/> -->
-    <node name ="cup_detector_node" pkg="bar_bot" type="cup_detector.py" output="screen" required="true"/>
+    <!-- <node name ="cup_detector_node" pkg="bar_bot" type="cup_detector.py" output="screen" required="true"/> -->
 
     <!-- Hebi interaction/kinematics -->
-    <!-- <node name="hebiros_node" pkg="hebiros" type="hebiros_node" respawn="false" output="screen"/>
-    <node name="mobility" pkg="bar_bot" type="mobility_server" /> -->
+
+    <node name="hebiros_node" pkg="hebiros" type="hebiros_node" respawn="false" output="screen">
+      <remap from="/hebiros/all/command/joint_state" to="/command_joint_state"/>
+    </node>
+    <node name="copy_topic" pkg="topic_tools" type="relay"
+      args="/hebiros/all/feedback/joint_state /feedback_joint_state"/>
+    <node name="copy_topic2" pkg="topic_tools" type="relay"
+      args="/hebiros/all/command/joint_state /command_joint_state"/>
+
+    <node name="mobility" pkg="bar_bot" type="mobility_server" output="screen"/>
 
     <!-- Commander -->
-    <!-- <node name="commander" pkg="bar_bot" type="commander_node" /> -->
+    <node name="commander" pkg="bar_bot" type="commander_node" output="screen"/>
+    <node name="rqt" pkg="rqt_gui" type="rqt_gui"/>
 
     <!-- Generic ROS/Visualization stuff -->
     <!-- <param name="robot_description" textfile="$(find bar_bot)/urdf/basic_arm.urdf"/> -->

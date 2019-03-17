@@ -14,7 +14,7 @@ class HebiHelper{
 
 private:
     // ros::NodeHandle n;
-    sensor_msgs::JointState feedback;       // The actuator feedback struccture
+    // sensor_msgs::JointState feedback;       // The actuator feedback struccture
     bool   gripper_closed = false;          // Gripper state
     double pour_angle = 0;                  // Gripper roll
 
@@ -24,12 +24,12 @@ private:
 
     // ros::Subscriber goalSubscriber;
     // ros::Subscriber validSubscriber;
-    ros::Subscriber feedback_subscriber;
+    // ros::Subscriber feedback_subscriber;
     // ros::Subscriber gripper_subscriber;
     ros::Publisher command_publisher;
 
     void setupGroup(ros::NodeHandle n);
-    void feedbackCallback(const sensor_msgs::JointState::ConstPtr& data);
+    // void feedbackCallback(const sensor_msgs::JointState::ConstPtr& data);
     // void gripperCallback(const std_msgs::Bool::ConstPtr& msg);
 
 public:
@@ -38,13 +38,17 @@ public:
         const std::vector<std::string>& names,
         const std::vector<std::string>& families);
 
-    const inline sensor_msgs::JointState getFeedback() { return feedback; }
+    // const inline sensor_msgs::JointState getFeedback() { return feedback; }
     bool setGripperClosed(bool is_closed); // Returns previous value
 
     double setPourAngle(double angle); // Returns previous value
 
-    void goToJointState(sensor_msgs::JointState joints);
+    inline bool getGripperClosed() { return gripper_closed; }
 
+    void goToJointState(sensor_msgs::JointState joints);
 };
+
+// Gripper boundaries, {min, max}
+static double gripbound[2] = {-1.0, 0};
 
 #endif /** #ifndef __HEBI_HELPER__ **/

@@ -2,8 +2,7 @@
 
 #define FLIP_PITCHES
 
-// Gripper boundaries, {min, max}
-static double gripbound[2] = {-1.0, 0};
+
 
 HebiHelper::HebiHelper(ros::NodeHandle n,
         const std::string& group_name,
@@ -17,8 +16,8 @@ HebiHelper::HebiHelper(ros::NodeHandle n,
     // validSubscriber = n.subscribe("/valid", 100, &HebiHelper::validCallback, this);
 
     // Create a subscriber to receive feedback from the actuator group.
-    feedback_subscriber = n.subscribe("/hebiros/"+group_name+"/feedback/joint_state",
-            100, &HebiHelper::feedbackCallback,this);
+    // feedback_subscriber = n.subscribe("/hebiros/"+group_name+"/feedback/joint_state",
+    //         100, &HebiHelper::feedbackCallback,this);
 
     // Create a publisher to send commands to the actuator group.
     command_publisher= n.advertise<sensor_msgs::JointState>
@@ -44,7 +43,6 @@ HebiHelper::HebiHelper(ros::NodeHandle n,
     for (auto i = 0; i < names.size(); i++) {
         this->names[i] = families[i] + "/" + names[i];
     }
-    ros::Rate loop_rate(200);
     // Wait until we have some feedback from the actuator.
     // ROS_INFO("Waiting for initial feedback");
     // while (!feedbackvalid)
@@ -82,11 +80,11 @@ void HebiHelper::setupGroup(ros::NodeHandle n){
     ROS_INFO("%s has been created and has size %d", group_name.c_str(), size_srv.response.size);
 }
 
-void HebiHelper::feedbackCallback(const sensor_msgs::JointState::ConstPtr& data)
-{
-    feedback = *data;
-    // feedbackvalid = 1;
-}
+// void HebiHelper::feedbackCallback(const sensor_msgs::JointState::ConstPtr& data)
+// {
+//     feedback = *data;
+//     feedbackvalid = 1;
+// }
 
 // Returns previous value
 bool HebiHelper::setGripperClosed(bool is_closed) {
@@ -102,16 +100,22 @@ double HebiHelper::setPourAngle(double angle) {
     return prev;
 }
 
+
+
 // NOTE: This method copies, and thus does not modify, its argument
 void HebiHelper::goToJointState(sensor_msgs::JointState joints)
 {
+    // ROS_INFO_STREAM("publishing joint state: " << joints);
 #ifdef FLIP_PITCHES
     joints.position[1] = -joints.position[1];
     joints.position[2] = -joints.position[2];
-    joints.position[3] = joints.position[3];
+    if (joints.velocity.size() > 2) {
+        joints.velocity[1] = -joints.velocity[1];
+        joints.velocity[2] = -joints.velocity[2];
+    }
 #endif
     joints.position[4] = pour_angle;
-    ROS_INFO("Joint size: %d", joints.position.size());
+    // ROS_INFO("Joint size: %d", joints.position.size());
     if (gripper_closed) {
         joints.position.push_back(gripbound[0]);
     } else {
@@ -120,5 +124,5 @@ void HebiHelper::goToJointState(sensor_msgs::JointState joints)
 
     joints.name = names;
     command_publisher.publish(joints);
-    ROS_INFO("After publish");
+    // ROS_INFO("After publish");
 }

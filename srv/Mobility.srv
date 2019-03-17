@@ -4,6 +4,9 @@ float64 pour_angle              # Angle in radians of the roll of the gripper
 bool close_gripper              # If true, close the gripper
 bool is_blocking                # If true, return only after reach target
 bool use_trajectory             # If true, generate cubic spline
+bool pouring_beer               # If true, continue to pour beer
 float64 move_time               # How long to take to get to the trajectory in secs
+float64 beer_nh                 # Height of bottle "neck"
+float64 beer_gh                 # Height at which gripper picks up bottle
 ---
 bool target_reached             # If false, likely timed out or was not blocking
