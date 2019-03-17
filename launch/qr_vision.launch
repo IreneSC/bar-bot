@@ -3,13 +3,14 @@
     <param name="img_proc_depth_topic" type="string" value="camera/aligned_depth_to_color/image_raw/image_rect_color" />
     <param name="processed_image_topic" type="string" value="barbot/processed" />
     <param name="cup_detection_topic" type="string" value="barbot/cup_detections" />
+    <param name="qr_detection_topic" type="string" value="barbot/qr_detections" />
     <param name="target_position_topic" type="string" value="barbot/target_position" />
     <param name="target_gripper_state_topic" type="string" value="barbot/target_gripper_state" />
     <param name="current_pose_topic" type="string" value="barbot/current_pose" />
 
     <!-- Camera -->
     <!-- <include file="$(find realsense2_camera)/launch/rs_camera.launch"/> -->
-    <node name ="cup_detector_node" pkg="bar_bot" type="cup_detector.py" output="screen" required="true"/>
+    <node name ="qr_detector_node" pkg="bar_bot" type="qr_detector.py" output="screen" required="true"/>
 
     <!-- Hebi interaction/kinematics -->
     <!-- <node name="hebiros_node" pkg="hebiros" type="hebiros_node" respawn="false" output="screen"/>

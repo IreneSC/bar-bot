@@ -184,6 +184,7 @@ target_link_libraries(commander_node
 ## in contrast to setup.py, you can choose the destination
 install(PROGRAMS
   scripts/cup_detector.py
+  scripts/qr_detector.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
