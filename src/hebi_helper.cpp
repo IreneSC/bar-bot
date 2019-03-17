@@ -2,8 +2,7 @@
 
 #define FLIP_PITCHES
 
-// Gripper boundaries, {min, max}
-static double gripbound[2] = {-1.0, 0};
+
 
 HebiHelper::HebiHelper(ros::NodeHandle n,
         const std::string& group_name,
@@ -100,6 +99,8 @@ double HebiHelper::setPourAngle(double angle) {
     pour_angle = angle;
     return prev;
 }
+
+
 
 // NOTE: This method copies, and thus does not modify, its argument
 void HebiHelper::goToJointState(sensor_msgs::JointState joints)

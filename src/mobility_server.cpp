@@ -248,6 +248,17 @@ static geometry_msgs::Point getPourTrajectory(double t, double beer_ang_init, do
     return ptmsg;
 }
 
+
+// checks if cup has been grabbed
+bool isCupGrabbed() {
+    if (helper_p->getGripperClosed()) {
+        double grip_angle = feedback_joint_state.position[5];
+        if (grip_angle != gripbound[0])
+            return true;
+    }
+    return false;
+}
+
 // Processes a request to move to some pose
 bool MobilitySrv::processRequest(Mobility::Request& req, Mobility::Response& res) {
     // Parse the message into a joint state

@@ -43,8 +43,12 @@ public:
 
     double setPourAngle(double angle); // Returns previous value
 
-    void goToJointState(sensor_msgs::JointState joints);
+    inline bool getGripperClosed() { return gripper_closed; }
 
+    void goToJointState(sensor_msgs::JointState joints);
 };
+
+// Gripper boundaries, {min, max}
+static double gripbound[2] = {-1.0, 0};
 
 #endif /** #ifndef __HEBI_HELPER__ **/
