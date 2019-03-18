@@ -20,10 +20,10 @@ SHAPE_RET_THRESHOLD=12
 
 def process_image(img):
     # binary = hue_mask(img, 30, 55, 15, 160,15, 160)
-    binary = hue_mask(img, 23, 62, 10, 170, 4, 170)
-    kernel = np.ones((5,5),np.uint8)
-    binary = cv2.erode(binary,kernel,iterations = 7)
-    binary = cv2.dilate(binary,kernel,iterations = 7)
+    binary = hue_mask(img, 23, 60, 10, 200, 10, 180)
+    kernel = np.ones((3,3),np.uint8)
+    binary = cv2.erode(binary,kernel,iterations = 13)
+    binary = cv2.dilate(binary,kernel,iterations = 5)
     _, contours, hierarchy = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     return binary, contours
 
@@ -53,6 +53,8 @@ def find_cups(img):
 
     cv2.drawContours(result,rectangles,-1,(0,255,0),2)
     cv2.drawContours(result,failed_rects,-1,(0,0,255),2)
+    # cv2.imshow("color", img)
+    # cv2.waitKey(500)
     return result, rectangles
 
 def process_images(depth_image, color_image):
