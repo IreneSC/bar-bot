@@ -168,7 +168,7 @@ static bool followTrajectory() {
         t = 0.0;
 
     // Max difference between actual and predicted speeds.
-    static constexpr double tolerance = .5;
+    static constexpr double tolerance = 100;
 
     // Compute the new position and velocity commands.
     if (!pouring) {
@@ -266,7 +266,7 @@ bool MobilitySrv::processRequest(Mobility::Request& req, Mobility::Response& res
     res.target_reached = true;
 
     if(req.close_gripper)
-        joint_state.position[gripper_index] = -.8;
+        joint_state.position[gripper_index] = -1;
     else
         joint_state.position[gripper_index] = 0;
 

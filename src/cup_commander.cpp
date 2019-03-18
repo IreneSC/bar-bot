@@ -5,48 +5,72 @@
 #include "sensor_msgs/JointState.h"
 #include "std_msgs/Bool.h"
 #include "bar_bot/Mobility.h"
+#include "bar_bot/Detections.h"
+#include <unordered_map>
 
-static std::string cup_detection_topic;
+// Topics
+static std::string detection_topic;
 static std::string target_position_topic;
 static std::string target_gripper_state_topic;
 static std::string current_pose_topic;
 
+// Pub/sub/clients
 static ros::ServiceClient mobility_client;
-// static ros::Publisher target_position_publisher;
-// static ros::Publisher target_gripper_state_publisher;
-static ros::Subscriber cup_detection_subscriber;
+static ros::Subscriber detection_subscriber;
 static ros::Subscriber current_pose_subscriber;
 
-static geometry_msgs::PoseArray cup_pose_array;
-static geometry_msgs::PoseArray empty_cup_pose_array;
+// Things gotten from topics
+// static geometry_msgs::PoseArray cup_pose_array;
+// static geometry_msgs::PoseArray empty_cup_pose_array;
 static geometry_msgs::PointStamped last_arm_pos;
+// static ros::Time last_cup_detection(0);
+// static ros::Duration detection_expiration(1.0);
 
-static const float scanning_z = .20;//m
-static const float scanning_r = .50;//m
-static float scanning_speed = -2.5;//rad/s
-static const float scanning_limit_left = 0.0;//rad
-static const float scanning_limit_right = -2 * M_PI/3.0;//rad
+// Set up map of detections
+static const std::string CUP("cup");
+static const std::string COKE("coke");
+static const std::string VODKA("vodka?");
+static const std::string RUM("rum");
+static std::unordered_map<std::string, geometry_msgs::Point> det_positions;
 
-static ros::Time last_cup_detection(0);
-static ros::Duration detection_expiration(1.0);
-
-static geometry_msgs::Point end_point;
-
+// Function definitions
 static void moveWithFailureChecking(bar_bot::Mobility mobility);
 
-void processCupPoses(const geometry_msgs::PoseArray& cup_positions) {
-    cup_pose_array = cup_positions;
-    last_cup_detection = cup_positions.header.stamp;
-    // std::cout << cup_pose_array << std::endl;
-    // ROS_ERROR("got a cup");
-}
+// Other constants
+static geometry_msgs::Point end_point;
 
-void waitForNewCups() {
-    auto curr = last_cup_detection;
-    while (curr == last_cup_detection) {
-        ros::spinOnce();
+static void backAndForth();
+static void trackCups();
+static void pourBeer();
+
+// Constants for looking for a cup
+// static const float scanning_z = .20;//m
+// static const float scanning_r = .50;//m
+// static float scanning_speed = -2.5;//rad/s
+// static const float scanning_limit_left = 0.0;//rad
+// static const float scanning_limit_right = -2 * M_PI/3.0;//rad
+
+// void processCupPoses(const geometry_msgs::PoseArray& cup_positions) {
+//     cup_pose_array = cup_positions;
+//     last_cup_detection = cup_positions.header.stamp;
+//     // std::cout << cup_pose_array << std::endl;
+//     // ROS_ERROR("got a cup");
+// }
+
+void processDetections(const bar_bot::Detections& dets) {
+    for (int i = 0; i < (int) dets.detection_types.size(); i++) {
+        const std::string& type = dets.detection_types[i];
+        det_positions[type] = dets.detection_positions[i];
+        ROS_INFO_STREAM(type << " loc: " << det_positions[type]);
     }
 }
+
+// void waitForNewCups() {
+//     auto curr = last_cup_detection;
+//     while (curr == last_cup_detection) {
+//         ros::spinOnce();
+//     }
+// }
 
 void processArmPose(const geometry_msgs::PoseStamped& arm_pose) {
     last_arm_pos.header = arm_pose.header;
@@ -61,24 +85,216 @@ static double distance(const geometry_msgs::Point& p1, const geometry_msgs::Poin
     return hypot(p1.x - p2.x, p1.y - p2.y, p1.z - p2.z);
 }
 
-static geometry_msgs::Point furthestPointFromTip() {
-    auto curr_arm_pos = last_arm_pos;
-    // std::cerr << "last arm pos: " << curr_arm_pos << std::endl;
-    auto curr_cup_poses = cup_pose_array;
-    double max_distance = -1;
-    geometry_msgs::Point best_pos = last_arm_pos.point;
-    if (curr_cup_poses.poses.size() <= 0)
-        ROS_ERROR("NO CUPS FOUND");
-    for (const auto& cup : curr_cup_poses.poses) {
-        // std::cerr << "cup pos: " << cup.position << std::endl;
-        double dist = distance(cup.position, curr_arm_pos.point);
-        if (dist > max_distance) {
-            max_distance = dist;
-            best_pos = cup.position;
+// static geometry_msgs::Point furthestPointFromTip() {
+//     auto curr_arm_pos = last_arm_pos;
+//     // std::cerr << "last arm pos: " << curr_arm_pos << std::endl;
+//     auto curr_cup_poses = cup_pose_array;
+//     double max_distance = -1;
+//     geometry_msgs::Point best_pos = last_arm_pos.point;
+//     if (curr_cup_poses.poses.size() <= 0)
+//         ROS_ERROR("NO CUPS FOUND");
+//     for (const auto& cup : curr_cup_poses.poses) {
+//         // std::cerr << "cup pos: " << cup.position << std::endl;
+//         double dist = distance(cup.position, curr_arm_pos.point);
+//         if (dist > max_distance) {
+//             max_distance = dist;
+//             best_pos = cup.position;
+//         }
+//     }
+//     return best_pos;
+// }
+
+// Returns where it picked it up
+static geometry_msgs::Point retrieveDrink(std::string drink) {
+    // Move above the cup
+    bar_bot::Mobility mobility;
+    mobility.request.pour_angle         = 0;
+    mobility.request.is_blocking        = true;
+    mobility.request.use_trajectory     = true;
+    static constexpr double height      = .15;
+
+    while(ros::ok()){
+        ros::spinOnce();
+        if (det_positions.count(drink)>0) {
+            mobility.request.target_loc         = det_positions[drink];
+            ROS_INFO_STREAM("coke loc: " << det_positions[drink]);
+            mobility.request.close_gripper      = false;
+            mobility.request.move_time          = 1.2; // Seconds
+
+            mobility.request.target_loc.x *= .945;
+            mobility.request.target_loc.y *= .945;
+            mobility.request.target_loc.z += .3;
+            moveWithFailureChecking(mobility);
+            break;
         }
     }
-    return best_pos;
+
+    // Move in front of the cup
+    geometry_msgs::Point saved_pos;
+    while(ros::ok()){
+        if (det_positions.count(drink)>0) {
+            saved_pos                           = det_positions[drink];
+            mobility.request.target_loc         = saved_pos;
+            mobility.request.close_gripper      = false;
+            mobility.request.move_time          = 0.75; // Seconds
+
+            mobility.request.target_loc.x *= .905;
+            mobility.request.target_loc.y *= .905;
+            auto x = mobility.request.target_loc.x;
+            auto y = mobility.request.target_loc.y;
+            mobility.request.target_loc.z = height * sqrt(x*x + y*y) / .6;
+            moveWithFailureChecking(mobility);
+            break;
+        }
+        ros::spinOnce();
+    }
+
+    // Move into the cup
+    while(ros::ok()){
+        ros::spinOnce();
+        mobility.request.target_loc         = saved_pos;
+        mobility.request.close_gripper      = false;
+        mobility.request.move_time          = 1.2; // Seconds
+
+        mobility.request.target_loc.x *= 1.05;
+        mobility.request.target_loc.y *= 1.05;
+        auto x = mobility.request.target_loc.x;
+        auto y = mobility.request.target_loc.y;
+        mobility.request.target_loc.z = height * sqrt(x*x + y*y) / .6;
+        moveWithFailureChecking(mobility);
+        break;
+    }
+
+    // Grab the cup
+    // bar_bot::Mobility mobility;
+    while(ros::ok()){
+        ros::spinOnce();
+        mobility.request.target_loc         = saved_pos;
+        mobility.request.use_trajectory     = false;
+        mobility.request.close_gripper      = true;
+        mobility.request.move_time          = .7; // Seconds
+
+        mobility.request.target_loc.x *= 1.05;
+        mobility.request.target_loc.y *= 1.05;
+        auto x = mobility.request.target_loc.x;
+        auto y = mobility.request.target_loc.y;
+        mobility.request.target_loc.z = height * sqrt(x*x + y*y) / .6;
+        moveWithFailureChecking(mobility);
+        break;
+    }
+
+    mobility.request.use_trajectory     = true;
+
+    // Pick up the cup
+    while(ros::ok()){
+        ros::spinOnce();
+        mobility.request.target_loc         = saved_pos;
+        mobility.request.close_gripper      = true;
+        mobility.request.move_time          = .75; // Seconds
+
+        mobility.request.target_loc.z = 0.3;
+        moveWithFailureChecking(mobility);
+        break;
+    }
+    return saved_pos;
 }
+
+static void pourIntoTarget(std::string drink) {
+    bar_bot::Mobility mobility;
+    mobility.request.pour_angle         = 0;
+    mobility.request.is_blocking        = true;
+    mobility.request.use_trajectory     = true;
+
+    const double height = .425;
+
+    // Move to above other cup
+    while(ros::ok()){
+        ros::spinOnce();
+        if (det_positions.count(drink)>0) {
+            auto target                         = det_positions[drink]; //furthestPointFromTip();
+            mobility.request.target_loc         = target;
+            mobility.request.close_gripper      = true;
+            mobility.request.move_time          = 1; // Seconds
+
+            mobility.request.target_loc.z = height;
+            moveWithFailureChecking(mobility);
+            break;
+        }
+    }
+
+    // Pour!
+    while(ros::ok()){
+        if (det_positions.count(drink)>0) {
+            auto target                         = det_positions[drink]; //furthestPointFromTip();
+            mobility.request.target_loc         = target;
+            mobility.request.pour_angle         = M_PI*3.0/4;
+            mobility.request.close_gripper      = true;
+            mobility.request.move_time          = 4.25; // Seconds
+            mobility.request.pouring_beer       = true;
+            mobility.request.beer_nh            = 0.05;
+            mobility.request.beer_gh            = 0.09;
+
+            mobility.request.target_loc.z = height;
+            moveWithFailureChecking(mobility);
+            break;
+        }
+        ros::spinOnce();
+    }
+}
+
+static void replaceDrink(std::string drink, geometry_msgs::Point end_loc) {
+    bar_bot::Mobility mobility;
+    mobility.request.pour_angle         = 0;
+    mobility.request.is_blocking        = true;
+    mobility.request.use_trajectory     = true;
+    mobility.request.pouring_beer       = false;
+    mobility.request.beer_nh            = 0;
+    mobility.request.beer_gh            = 0;
+
+    // Put it back down.
+    mobility.request.target_loc         = end_loc; // furthestPointFromTip();
+    mobility.request.close_gripper      = true;
+    mobility.request.move_time          = 1; // Seconds
+
+    mobility.request.target_loc.z = 0.275;
+    moveWithFailureChecking(mobility);
+
+    // All the way to the ground
+    mobility.request.target_loc         = end_loc; // furthestPointFromTip();
+    mobility.request.close_gripper      = true;
+    mobility.request.move_time          = 1.35; // Seconds
+
+    mobility.request.target_loc.x *= .925;
+    mobility.request.target_loc.y *= .925;
+    mobility.request.target_loc.z = 0.05;
+    moveWithFailureChecking(mobility);
+
+    ros::Duration(1).sleep(); // Make sure you're really on the ground
+
+    // Release! I said, release boy!
+    mobility.request.target_loc         = end_loc; // furthestPointFromTip();
+    mobility.request.close_gripper      = false;
+    mobility.request.move_time          = 3.5; // Seconds
+
+    mobility.request.target_loc.z = 0.05;
+    moveWithFailureChecking(mobility);
+
+    ros::Duration(6).sleep();
+
+    mobility.request.target_loc         = end_loc; // furthestPointFromTip();
+    mobility.request.close_gripper      = false;
+    mobility.request.move_time          = 3; // Seconds
+
+    mobility.request.target_loc.z = 0.45;
+    moveWithFailureChecking(mobility);
+}
+
+static void pourDrinkIntoCup(std::string drink) {
+    auto loc = retrieveDrink(drink);
+    pourIntoTarget(CUP);
+    replaceDrink(drink, loc);
+}
+
 
 static void pourCups() {
     // Move above the cup
@@ -90,8 +306,8 @@ static void pourCups() {
 
     while(ros::ok()){
         ros::spinOnce();
-        if (cup_pose_array.poses.size() > 0) {
-            mobility.request.target_loc         = cup_pose_array.poses[0].position;
+        if (det_positions.count(CUP)>0) {
+            mobility.request.target_loc         = det_positions[CUP];
             mobility.request.close_gripper      = false;
             mobility.request.move_time          = 1.2; // Seconds
 
@@ -106,8 +322,8 @@ static void pourCups() {
     // Move in front of the cup
     geometry_msgs::Point saved_pos;
     while(ros::ok()){
-        if (cup_pose_array.poses.size() > 0) {
-            saved_pos                           = cup_pose_array.poses[0].position;
+        if (det_positions.count(CUP)>0) {
+            saved_pos                           = det_positions[CUP];
             mobility.request.target_loc         = saved_pos;
             mobility.request.close_gripper      = false;
             mobility.request.move_time          = 0.75; // Seconds
@@ -134,7 +350,6 @@ static void pourCups() {
         moveWithFailureChecking(mobility);
         break;
     }
-    // waitForNewCups();
 
     // Grab the cup
     // bar_bot::Mobility mobility;
@@ -169,8 +384,8 @@ static void pourCups() {
     // Move to above other cup
     while(ros::ok()){
         ros::spinOnce();
-        if (cup_pose_array.poses.size() > 0) {
-            auto target                         = furthestPointFromTip();
+        if (det_positions.count(CUP)>0) {
+            auto target                         = det_positions[CUP]; //furthestPointFromTip();
             mobility.request.target_loc         = target;
             mobility.request.close_gripper      = true;
             mobility.request.move_time          = 1; // Seconds
@@ -183,8 +398,8 @@ static void pourCups() {
 
     // Pour!
     while(ros::ok()){
-        if (cup_pose_array.poses.size() > 0) {
-            auto target                         = furthestPointFromTip();
+        if (det_positions.count(CUP)>0) {
+            auto target                         = det_positions[CUP]; //furthestPointFromTip();
             mobility.request.target_loc         = target;
             mobility.request.pour_angle         = M_PI*3.0/4;
             mobility.request.close_gripper      = true;
@@ -210,7 +425,6 @@ static void pourCups() {
     // Put it back down.
     while(ros::ok()){
         // ros::spinOnce();
-        ROS_ERROR("size: %d", (int)cup_pose_array.poses.size());
         mobility.request.target_loc         = end_point; // furthestPointFromTip();
         mobility.request.close_gripper      = true;
         mobility.request.move_time          = 1; // Seconds
@@ -248,83 +462,6 @@ static void pourCups() {
 
 }
 
-static void trackCups() {
-    ros::Rate loop_rate(2);
-    bar_bot::Mobility mobility;
-    while(ros::ok()){
-        ROS_ERROR("size: %d", (int)cup_pose_array.poses.size());
-        if (cup_pose_array.poses.size() > 0) {
-            // saved_pos                           = cup_pose_array.poses[0].position;
-            mobility.request.target_loc         = cup_pose_array.poses[0].position;
-            mobility.request.pour_angle         = 0;
-            mobility.request.is_blocking        = true;
-            mobility.request.use_trajectory     = true;
-            mobility.request.close_gripper      = false;
-            mobility.request.move_time          = 1.5; // Seconds
-            mobility.request.pouring_beer       = false;
-
-            mobility.request.target_loc.z = 0.15;
-
-            moveWithFailureChecking(mobility);
-        }
-        ros::spinOnce();
-        loop_rate.sleep();
-    }
-}
-
-static void backAndForth() {
-    ros::Rate loop_rate(5);
-    // Move back and forth
-    bar_bot::Mobility mobility;
-    mobility.request.pour_angle         = 0;
-    mobility.request.is_blocking        = true;
-    mobility.request.use_trajectory     = true;
-    mobility.request.close_gripper      = false;
-    mobility.request.move_time          = 1.5; // Seconds
-
-    while(ros::ok()){
-        ros::spinOnce();
-        loop_rate.sleep();
-        mobility.request.target_loc.x =  0;
-        mobility.request.target_loc.y = .5;
-        mobility.request.target_loc.z = .3;
-
-        moveWithFailureChecking(mobility);
-
-        mobility.request.target_loc.x = .3;
-        mobility.request.target_loc.y = .3;
-        mobility.request.target_loc.z = .15;
-
-        moveWithFailureChecking(mobility);
-    }
-}
-
-static void pourBeer() {
-    ros::Rate loop_rate(1);
-    bar_bot::Mobility mobility;
-
-    // Pour!
-    while(ros::ok()){
-        mobility.request.pour_angle         = M_PI*3.0/4;
-        mobility.request.is_blocking        = true;
-        mobility.request.use_trajectory     = true;
-        mobility.request.close_gripper      = true;
-        mobility.request.move_time          = 5; // Seconds
-        mobility.request.pouring_beer       = true;
-        mobility.request.beer_nh            = 0.15;
-        mobility.request.beer_gh            = 0.05;
-
-        mobility.request.target_loc.x = 0;
-        mobility.request.target_loc.y = 0.5;
-        mobility.request.target_loc.z = 0.4;
-
-        moveWithFailureChecking(mobility);
-
-        ros::spinOnce();
-        loop_rate.sleep();
-    }
-}
-
 static void moveWithFailureChecking(bar_bot::Mobility mobility) {
     while (true) {
         mobility.response.target_reached = false;
@@ -345,9 +482,6 @@ int main(int argc, char **argv) {
     ros::Rate loop_rate(5);
 
     ros::NodeHandle nh;
-    std::vector<geometry_msgs::Pose> empty_poses;
-    cup_pose_array.poses = empty_poses;
-    // last_arm_pos = geometry_msgs::PointStamped();
     last_arm_pos.point.x = .3;
     last_arm_pos.point.y = 0;
     last_arm_pos.point.z = .1;
@@ -356,12 +490,7 @@ int main(int argc, char **argv) {
     end_point.y = .74;
     end_point.z = 0.05;
 
-    // cup_pose_array = geometry_msgs::PointStamped();
-    // cup_pose_array.point.x = .3;
-    // cup_pose_array.point.y = 0;
-    // cup_pose_array.point.z = .10;
-
-    cup_detection_topic = "/bar_bot/cup_multidetections";
+    detection_topic = "/bar_bot/detections";
 
     // if (!nh.getParam("cup_detection_topic", cup_detection_topic))
     // {
@@ -391,8 +520,8 @@ int main(int argc, char **argv) {
     // target_gripper_state_publisher
     //     = nh.advertise<std_msgs::Bool>(target_gripper_state_topic, 1);
 
-    cup_detection_subscriber = nh.subscribe(cup_detection_topic, 10,
-        &processCupPoses);
+    detection_subscriber = nh.subscribe(detection_topic, 10,
+        &processDetections);
     current_pose_subscriber = nh.subscribe(current_pose_topic, 10,
         &processArmPose);
 
@@ -414,19 +543,96 @@ int main(int argc, char **argv) {
         if(temp_mobility.response.target_reached)
             break;
         ros::Duration(2).sleep();
-        ROS_ERROR_THROTTLE(1, "call failed!");
+        ROS_INFO_THROTTLE(1, "call failed!");
     }
-    ROS_ERROR("call succeeded!");
-    // mobility_client.call(temp_mobility);
+    ROS_INFO("call succeeded!");
 
-    pourCups();
+    // pourCups();
     // backAndForth();
     // trackCups();
     // pourBeer();
+    pourDrinkIntoCup(COKE);
+    trackCups();
 
     ros::shutdown();
 
     return 0;
+}
+
+void trackCups() {
+    ros::Rate loop_rate(2);
+    bar_bot::Mobility mobility;
+    while(ros::ok()){
+        if (det_positions.count(CUP)>0) {
+            // saved_pos                           = det_positions[CUP];
+            mobility.request.target_loc         = det_positions[CUP];
+            mobility.request.pour_angle         = 0;
+            mobility.request.is_blocking        = true;
+            mobility.request.use_trajectory     = true;
+            mobility.request.close_gripper      = false;
+            mobility.request.move_time          = 1.5; // Seconds
+            mobility.request.pouring_beer       = false;
+
+            mobility.request.target_loc.z = 0.45;
+
+            moveWithFailureChecking(mobility);
+        }
+        ros::spinOnce();
+        loop_rate.sleep();
+    }
+}
+
+void backAndForth() {
+    ros::Rate loop_rate(5);
+    // Move back and forth
+    bar_bot::Mobility mobility;
+    mobility.request.pour_angle         = 0;
+    mobility.request.is_blocking        = true;
+    mobility.request.use_trajectory     = true;
+    mobility.request.close_gripper      = false;
+    mobility.request.move_time          = 1.5; // Seconds
+
+    while(ros::ok()){
+        ros::spinOnce();
+        loop_rate.sleep();
+        mobility.request.target_loc.x =  0;
+        mobility.request.target_loc.y = .5;
+        mobility.request.target_loc.z = .3;
+
+        moveWithFailureChecking(mobility);
+
+        mobility.request.target_loc.x = .3;
+        mobility.request.target_loc.y = .3;
+        mobility.request.target_loc.z = .15;
+
+        moveWithFailureChecking(mobility);
+    }
+}
+
+void pourBeer() {
+    ros::Rate loop_rate(1);
+    bar_bot::Mobility mobility;
+
+    // Pour!
+    while(ros::ok()){
+        mobility.request.pour_angle         = M_PI*3.0/4;
+        mobility.request.is_blocking        = true;
+        mobility.request.use_trajectory     = true;
+        mobility.request.close_gripper      = true;
+        mobility.request.move_time          = 5; // Seconds
+        mobility.request.pouring_beer       = true;
+        mobility.request.beer_nh            = 0.15;
+        mobility.request.beer_gh            = 0.05;
+
+        mobility.request.target_loc.x = 0;
+        mobility.request.target_loc.y = 0.5;
+        mobility.request.target_loc.z = 0.4;
+
+        moveWithFailureChecking(mobility);
+
+        ros::spinOnce();
+        loop_rate.sleep();
+    }
 }
 
 

@@ -36,9 +36,9 @@ def process_images(depth_image, color_image):
         cv2.drawContours(roi_mask,[roi_contour],-1,255,-1)
         locs0, locs1 = np.nonzero(roi_mask)
         margin = 10
-        x_min, x_max = max(np.amin(locs0)-margin,0), min(np.amax(locs0)+margin, roi_mask.shape[0])
-        y_min, y_max = max(np.amin(locs1)-margin,0), min(np.amax(locs1)+margin, roi_mask.shape[1])
-        cropped = color_image[x_min: x_max, y_min: y_max]
+        y_min, y_max = max(np.amin(locs0)-margin,0), min(np.amax(locs0)+margin, roi_mask.shape[0])
+        x_min, x_max = max(np.amin(locs1)-margin,0), min(np.amax(locs1)+margin, roi_mask.shape[1])
+        cropped = color_image[y_min: y_max, x_min: x_max]
         cropped = cv2.cvtColor(cropped,cv2.COLOR_BGR2GRAY)
         # cropped = adjust_gamma(cropped, gamma=0.5)
         # cropped = cropped.astype('float64')
@@ -59,20 +59,28 @@ def process_images(depth_image, color_image):
         # cropped = cv2.cvtColor(th2, cv2.COLOR_GRAY2BGR)
         decodedObjects, hulls = decode(cv2.cvtColor(cropped,cv2.COLOR_BGR2GRAY))
 
+        center = None
+        circclllee = (x_min, y_min)
         for obj, hull in zip(decodedObjects, hulls):
             n = len(hull)
             center_x = 0
             center_y = 0
             for j in range(0,n):
                 cv2.line(cropped, hull[j], hull[ (j+1) % n], (255,0,0), 3)
-                center_x +=hull[j][0]/n
-                center_y +=hull[j][1]/n
-            center = (center_x + x_min, center_y+ y_min)
+                center_x +=hull[j][1]/n
+                center_y +=hull[j][0]/n
+            center = (center_x + x_min, center_y + y_min)
+            print("center: ", center)
             if obj.data in detections:
                 detections[obj.data].append(center)
             else:
                 detections[obj.data] = [center]
             cv2.putText(cropped, obj.data, hull[0], cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,255), 2, cv2.LINE_AA)
-        color_image[x_min: x_max, y_min: y_max] = cropped
+        color_image[y_min: y_max, x_min: x_max] = cropped
+
+        if (center is not None):
+            cv2.circle(color_image, center, 10, (255,0,255), -1)
+
+        # cv2.circle(color_image, circclllee, 30, (255,255,0), -1)
 
     return detections, color_image
