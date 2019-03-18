@@ -45,7 +45,7 @@ static const std::string SALTYY("salt");
 
 static std::unordered_map<std::string, geometry_msgs::Point> det_positions;
 // mixed drink definitions
-static const std::vector<std::string> MARGARITA{SALTYY, TECHY, OJ};
+static const std::vector<std::string> MARGARITA{TECHY, OJ, SALTYY};
 static const std::vector<std::string> SCREWDRIVER{VODKA, OJ};
 static const std::vector<std::string> TECHY_SUN{TECHY, GRENNY, OJ, SPRITE};
 static const std::vector<std::string> SUNRISE{GRENNY, OJ, SPRITE};
@@ -82,9 +82,13 @@ static void pourDrinkIntoCup(std::string drink);
 static geometry_msgs::Point retrieveDrink(std::string drink);
 static void pourIntoTarget(std::string drink);
 static void replaceDrink(std::string drink, geometry_msgs::Point end_loc);
+static void saltTheCup();
+
+
 
 static void pourMixedDrink();
 static void processDrinkRequest(const std_msgs::String& drinkType);
+static void kissMySaltyAss(); 
 static std::vector<std::string> drinkQueue;
 
 // Constants for looking for a cup
@@ -433,6 +437,7 @@ void replaceDrink(std::string drink, geometry_msgs::Point end_loc) {
     moveWithFailureChecking(mobility);
 }
 
+
 void pourDrinkIntoCup(std::string drink) {
     auto loc = retrieveDrink(drink);
     goHomeCup(true);
@@ -453,7 +458,11 @@ void pourMixedDrink()  {
     std::string drink;
     while (drinkQueue.size() != 0) {
         drink = popDrink();
-        pourDrinkIntoCup(drink);
+        if (drink.compare("salt") == 0) {
+            kissMySaltyAss();
+        } else {
+            pourDrinkIntoCup(drink);
+        }
     }
     ros::spinOnce();
 }
@@ -676,4 +685,83 @@ void pourBeer() {
         ros::spinOnce();
         loop_rate.sleep();
     }
+}
+
+void saltTheCup() {
+    bar_bot::Mobility mobility;
+    mobility.request.disable_collisions = false;
+    mobility.request.pour_angle         = 0;
+    mobility.request.is_blocking        = true;
+    mobility.request.use_trajectory     = true;
+
+    const double height = .285;
+    const double scale  = .985;
+
+    // Move to above salt plate
+    while(ros::ok()){
+        ros::spinOnce();
+        if (det_positions.count(SALTYY)>0) {
+            auto target                         = det_positions[SALTYY]; //furthestPointFromTip();
+            mobility.request.target_loc         = target;
+            mobility.request.close_gripper      = true;
+            mobility.request.move_time          = 2.5; // Seconds
+
+            mobility.request.target_loc.x *= scale;
+            mobility.request.target_loc.y *= scale;
+            mobility.request.target_loc.z = height;
+            if(moveWithFailureChecking(mobility)) {
+                break;
+            }
+        }
+    }
+
+    // Wait until we get a new cup detection
+    ros::Duration(1).sleep();
+
+    // Recenter above the salt plate, and save that as the target to pour over 
+    geometry_msgs::Point target;
+    while(ros::ok()){
+        ros::spinOnce();
+        if (det_positions.count(SALTYY)>0) {
+            target                              = det_positions[SALTYY]; //furthestPointFromTip();
+            mobility.request.target_loc         = target;
+            mobility.request.close_gripper      = true;
+            mobility.request.move_time          = .75; // Seconds
+
+            mobility.request.target_loc.x *= scale;
+            mobility.request.target_loc.y *= scale;
+            mobility.request.target_loc.z = height;
+            if(moveWithFailureChecking(mobility)) {
+                break;
+            }
+        }
+    }
+
+    // SALT!
+    while(ros::ok()){
+        if (det_positions.count(SALTYY)>0) {
+            mobility.request.target_loc         = target;
+            mobility.request.close_gripper      = true;
+            mobility.request.move_time          = 7; // Seconds
+            mobility.request.salting_cup        = true;
+
+            mobility.request.target_loc.x *= scale;
+            mobility.request.target_loc.y *= scale;
+            mobility.request.target_loc.z = height;
+            if(moveWithFailureChecking(mobility)) {
+                break;
+            }
+        }
+        ros::spinOnce();
+    }
+}
+
+void kissMySaltyAss() {
+    goHomeBottle();
+    auto loc_drink = retrieveDrink(CUP);
+    goHomeBottle();
+    saltTheCup();
+    goHomeBottle();
+    replaceDrink(CUP, loc_drink);
+    goHomeCup();
 }

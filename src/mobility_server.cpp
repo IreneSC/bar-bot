@@ -37,7 +37,11 @@ static bool disable_collisions = false;
 static bool pouring = false;
 static double beer_nh;
 static double beer_gh;
-static geometry_msgs::Point pour_pos_init;
+static geometry_msgs::Point action_pos_init;
+
+// Salting
+static bool salting = false;
+static double saltTimes[3] = {3, 5, 8};
 
 // Time
 static ros::Time prev_time;
@@ -63,6 +67,7 @@ static bool areWeThereYet(const geometry_msgs::PointStamped& target_loc, double 
 static void initTrajectory(const sensor_msgs::JointState& target_joints, const bool use_cubic_spline, const double min_time);
 static bool followTrajectory();
 static geometry_msgs::Point getPourTrajectory(double t, double beer_ang_init, double beer_ang_max);
+static geometry_msgs::Point getSaltTrajectory(double t);
 // static void processTargetState(const geometry_msgs::PointStamped& target_loc);
 static void processFeedback(const sensor_msgs::JointState& joints);
 static bool block(const geometry_msgs::Point& target_loc, double timeout_secs);
@@ -182,7 +187,30 @@ static bool followTrajectory() {
     double theta_pitch1 = feedback_joint_state.position[1];
     double theta_pitch2 = feedback_joint_state.position[2];
     // Compute the new position and velocity commands.
-    if (!pouring) {
+    if (pouring) {
+        geometry_msgs::Point traj_loc;
+        traj_loc = getPourTrajectory(t, 0, abs(pour_angle)); // curr time, min angle, max angle
+        // ROS_INFO_STREAM("pour_loc: " << por_pos_init <<
+                        // ", traj_loc: " << traj_loc << 
+                        // ", current loc: " << feedback_pose.pose.position);
+
+        cmdMsg             = positionToJointAngles(traj_loc);
+        cmdMsg.effort.resize(num_joints);
+        // Set the gripper position regardless
+        q[5]               = a[5]+t*(b[5]+t*(c[5]+t*d[5]));
+        cmdMsg.position[5] = q[5];
+    } else if (salting){
+        geometry_msgs::Point traj_loc;
+        traj_loc = getSaltTrajectory(t); // curr time
+        cmdMsg             = positionToJointAngles(traj_loc);
+        cmdMsg.effort.resize(num_joints);
+        // Set the gripper position regardless
+        if (t < t_f/2)
+            q[5] = M_PI;
+        else
+            q[5] = 0;
+        cmdMsg.position[5] = q[5];
+    } else {
         for (int i = 0 ; i < num_joints ; i++)
         {
             q[i]    = a[i]+t*(b[i]+t*(c[i]+t*d[i]));
@@ -223,19 +251,7 @@ static bool followTrajectory() {
                 // ROS_INFO_THROTTLE(time_deadzone, "IN DEAD ZONE TIME");
             }
         }
-    } else {
-        geometry_msgs::Point traj_loc;
-        traj_loc = getPourTrajectory(t, 0, abs(pour_angle)); // curr time, min angle, max angle
-        // ROS_INFO_STREAM("pour_loc: " << pour_pos_init <<
-                        // ", traj_loc: " << traj_loc << 
-                        // ", current loc: " << feedback_pose.pose.position);
-
-        cmdMsg             = positionToJointAngles(traj_loc);
-        cmdMsg.effort.resize(num_joints);
-        // Set the gripper position regardless
-        q[5]               = a[5]+t*(b[5]+t*(c[5]+t*d[5]));
-        cmdMsg.position[5] = q[5];
-    }
+    } 
 
     cmdMsg.effort[1]   = -10 * cos(theta_pitch1)
                             + -6 * cos(theta_pitch1 + theta_pitch2);
@@ -255,9 +271,9 @@ static geometry_msgs::Point getPourTrajectory(double t, double beer_ang_init, do
     t = t+t_f;
     if (t >= t_f) t=t_f;
 
-    double x0 = pour_pos_init.x;
-    double y0 = pour_pos_init.y;
-    double z0 = pour_pos_init.z;
+    double x0 = action_pos_init.x;
+    double y0 = action_pos_init.y;
+    double z0 = action_pos_init.z;
 
     double base_ang_init = atan2(y0,x0);    // original base angle
     double r = sqrt(x0*x0 + y0*y0);         // radius
@@ -280,6 +296,34 @@ static geometry_msgs::Point getPourTrajectory(double t, double beer_ang_init, do
 
     x1 = r*cos(base_ang_init - base_ang_off);
     y1 = r*sin(base_ang_init - base_ang_off);
+
+    geometry_msgs::Point ptmsg;
+    ptmsg.x = x1;
+    ptmsg.y = y1;
+    ptmsg.z = z1;
+
+    return ptmsg;
+}
+
+
+
+static geometry_msgs::Point getSaltTrajectory(double t) {
+    t = t+t_f;
+    if (t >= t_f) t=t_f;
+
+    // 3 movements: windup, smash, reset
+
+
+    double x0 = action_pos_init.x;
+    double y0 = action_pos_init.y;
+    double z0 = action_pos_init.z;
+
+    double x1, y1, z1;                          // desired position
+
+    z1 = beer_nh + z0 - z0 * sin(t/t_f*M_PI);
+    x1 = x0;
+    y1 = y0;
+
 
     geometry_msgs::Point ptmsg;
     ptmsg.x = x1;
@@ -343,12 +387,23 @@ bool MobilitySrv::processRequest(Mobility::Request& req, Mobility::Response& res
         if (pouring) {
             ROS_INFO("Pouring is now true!");
             t_f = req.move_time;
-            pour_pos_init = req.target_loc;
+            action_pos_init = req.target_loc;
             beer_nh = req.beer_nh;
             beer_gh = req.beer_gh;
         }
     }
     pouring = req.pouring_beer;
+
+    if (!salting) {
+        salting = req.salting_cup;
+        if (salting) {
+            ROS_INFO("Salting is now true!");
+            t_f = req.move_time;
+            beer_nh = req.beer_nh;
+            action_pos_init = req.target_loc;
+        }
+    }
+    salting = req.salting_cup;
 
     if (req.is_blocking) {
         res.target_reached = block(req.target_loc, req.move_time * 1.5);
