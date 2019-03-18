@@ -12,6 +12,7 @@ static constexpr double d2 = .445; // .445
 static constexpr double d3 = .395; // .40 // .463
 static constexpr double d4 = .09;
 constexpr int num_joints = 6;
+constexpr double ANGLE_ERROR = -1337;
 
 using namespace Eigen;
 
@@ -48,7 +49,7 @@ static inline Affine3d GST(double theta1, double theta2, double theta3,
     return G1(theta1)*G2(d1, theta2)*G3(d2, theta3)*G4(d3, theta4)*G5(d4, theta5);
 }
 
-static inline double theta1(double y,double x){
+inline double theta1(double y,double x){
     return atan2(-x,y);
 }
 static inline double theta2(double r, double z){
@@ -60,6 +61,7 @@ static inline double theta2(double r, double z){
     if (abs(acos_arg) > 1) {
         ROS_WARN("acos arg too big: %f", acos_arg);
         acos_arg /= abs(acos_arg);
+        return ANGLE_ERROR;
     }
     double beta = acos(acos_arg);
     return alpha + beta;
@@ -70,6 +72,7 @@ static inline double theta3(double r,double z){
     if (abs(acos_arg) > 1) {
         ROS_WARN("acos arg too big: %f", acos_arg);
         acos_arg /= abs(acos_arg);
+        return ANGLE_ERROR;
     }
     return acos(acos_arg) - M_PI;
 }

@@ -67,8 +67,8 @@ def process_images(depth_image, color_image):
             center_y = 0
             for j in range(0,n):
                 cv2.line(cropped, hull[j], hull[ (j+1) % n], (255,0,0), 3)
-                center_x +=hull[j][1]/n
-                center_y +=hull[j][0]/n
+                center_x +=hull[j][0]/n
+                center_y +=hull[j][1]/n
             center = (center_x + x_min, center_y + y_min)
             print("center: ", center)
             if obj.data in detections:

@@ -20,18 +20,29 @@ static volatile bool feedback_ready;
 static geometry_msgs::PoseStamped feedback_pose;
 static sensor_msgs::JointState  feedback_joint_state;
 
+// Function parameters for tuning
+static constexpr double max_dist = 0.05; // meters, move_to function
+static constexpr double tol_def = 0.55; // Default tolerance
+// Max difference between actual and predicted speeds, per joint
+static constexpr double tolerance[] = {tol_def, tol_def, tol_def, tol_def, tol_def, 1.2, 1.2}; 
+static constexpr double time_deadzone = 0.15; // Time zone (s) in which collisions
+                                              // are ignored at start and end of trajectory.
+static bool disable_collisions = false;
+
+//
 // Stuff for handling trajectories
-static bool pouring = false;
+//
 
 // Pouring beer
+static bool pouring = false;
 static double beer_nh;
 static double beer_gh;
 static geometry_msgs::Point pour_pos_init;
 
-
 // Time
 static ros::Time prev_time;
 static double t_f;
+static constexpr double max_time = 7; // No more than seven seconds.
 
 // Positions (angular)
 static double  q[num_joints];
@@ -82,7 +93,6 @@ static void initTrajectory(const sensor_msgs::JointState& target_joints,
     int     i;
     double  tmove;        // Total move time
     double  tmp;
-    static constexpr double max_time = 7; // No more than seven seconds.
 
     // Pick a move time.  Note this is approximate.  We could compute
     // the absolute fastest time or pass as an argument.
@@ -135,7 +145,6 @@ static void processFeedback(const sensor_msgs::JointState& joints) {
 // Block until we reach the target location target_loc
 // Return true if the target was reached
 static bool block(const geometry_msgs::Point& target_loc, double timeout_secs) {
-    static constexpr double max_dist = 0.05; // meters
     auto cur_time = ros::Time::now();
     while (!areWeThereYet(target_loc, max_dist) && (ros::Time::now() - cur_time).toSec() < timeout_secs) {
         ros::spinOnce();
@@ -164,11 +173,10 @@ static bool followTrajectory() {
     // Advance time, but hold at t=0 to stay at the final position.
     // double t = (ros::Time::now() - prev_time).toSec();
     double t = (ros::Time::now() - prev_time).toSec() - t_f;
+    double time_since_start = (ros::Time::now() - prev_time).toSec();
+    double time_till_end = t_f - (ros::Time::now() - prev_time).toSec();
     if (t > 0.0)
         t = 0.0;
-
-    // Max difference between actual and predicted speeds.
-    static constexpr double tolerance = 100;
 
     // Compute the new position and velocity commands.
     if (!pouring) {
@@ -179,21 +187,30 @@ static bool followTrajectory() {
 
             cmdMsg.position[i] = q[i];
             cmdMsg.velocity[i] = qdot[i];
-            if (abs(qdot[i] - feedback_joint_state.velocity[i]) > tolerance) {
-                ROS_ERROR_THROTTLE(0.1,
-                        "Collision detected on joint %d! Qdot: %f, feedback: %f, delta: %f",
-                        i, qdot[i], feedback_joint_state.velocity[i],
-                        abs(qdot[i] - feedback_joint_state.velocity[i]));
+            // We only check if we're in the middle of the trajectory
+            if (feedback_ready && !disable_collisions &&
+                    time_since_start > time_deadzone && time_till_end > time_deadzone) {
+                if (abs(qdot[i] - feedback_joint_state.velocity[i]) > tolerance[i]) {
+                    ROS_ERROR_THROTTLE(0.1,
+                            "Collision detected on joint %d! "
+                            "Qdot: %f, feedback: %f, delta: %f, tolerance: %f",
+                            i, qdot[i], feedback_joint_state.velocity[i],
+                            abs(qdot[i] - feedback_joint_state.velocity[i]),
+                            tolerance[i]);
 
-                // Stop moving, since we hit something
-                auto temp = feedback_joint_state;
-                for (int j = 0; j < temp.velocity.size(); j++) {
-                    temp.velocity[j] = 0;
+                    // Stop moving, since we hit something
+                    auto temp = feedback_joint_state;
+                    for (int j = 0; j < temp.velocity.size(); j++) {
+                        temp.velocity[j] = 0;
+                    }
+
+                    helper_p->goToJointState(temp);
+                    initTrajectory(temp, false, 0);
+                    // helper_p->goToJointState(feedback_joint_state);
+                    return false;
                 }
-                helper_p->goToJointState(temp);
-                initTrajectory(temp, false, 0);
-                // helper_p->goToJointState(feedback_joint_state);
-                return false;
+            } else {
+                // ROS_INFO_THROTTLE(time_deadzone, "IN DEAD ZONE TIME");
             }
         }
     } else {
@@ -257,10 +274,38 @@ static geometry_msgs::Point getPourTrajectory(double t, double beer_ang_init, do
     return ptmsg;
 }
 
+static bool isSanePosition(const geometry_msgs::Point& pt) {
+    double theta = theta1(pt.y, pt.x);
+
+    bool sane_axes = (pt.x > -.3  && pt.x < .7) &&
+                     (pt.y > 0    && pt.y < 1)  &&
+                     (pt.z > -.05 && pt.z < .55); // Z probably should be positive
+    bool sane_distance = sqrt(pt.x*pt.x + pt.y*pt.y + pt.z*pt.z) < 1.5; // reduce to 1.25?
+    bool sane_theta = theta < 2*M_PI/3 && theta > -M_PI/4;
+    bool success = sane_axes && sane_distance && sane_theta;
+    if (!success)
+        ROS_WARN_STREAM("Insane pos: " << pt <<
+                        "theta = " << theta <<
+                        "sane_distance = " << sane_distance <<
+                        "sane_axes = " << sane_axes <<
+                        "sane thet = " << sane_theta);
+    return success;
+}
+
 // Processes a request to move to some pose
 bool MobilitySrv::processRequest(Mobility::Request& req, Mobility::Response& res) {
     // Parse the message into a joint state
     sensor_msgs::JointState joint_state = positionToJointAngles(req.target_loc);
+    if (!isSanePosition(req.target_loc)
+        || joint_state.position[1] == ANGLE_ERROR
+        || joint_state.position[2] == ANGLE_ERROR)
+    {
+        res.target_reached = false;
+        return false;
+    }
+    disable_collisions = req.disable_collisions;
+    ROS_INFO("Collisions disabled? %s", (disable_collisions ? "yes" : "no"));
+
     joint_state.header.stamp = ros::Time::now();
     joint_state.name = joint_names;
     res.target_reached = true;
