@@ -12,6 +12,7 @@
  * and corresponding drink is made
  */
 
+
 #include <ros.h>
 #include <std_msgs/String.h>
 
@@ -29,14 +30,16 @@ long time[nb]           = {0, 0, 0, 0};             // the last time the output 
 long debounce           = 200;                      // debounce time, increase if buggy
 bool publish            = false;                     // only publish when somthing has changed
 
+
 // initialize ROS stuff
 ros::NodeHandle nh;
 
 std_msgs::String str_msg;
 ros::Publisher buttons("pushed", &str_msg);
 
+
 void setup() {
-  Serial.begin(115200);
+  Serial.begin(9600);
 
   // set all buttons to input
   for (int i = 0; i < nb; i++) {
@@ -52,11 +55,12 @@ void setup() {
     b_state[i] = digitalRead(b_PIN[i]);
     b_previous[i] = b_state[i];
   }
+
 }
 
 void loop() {
 
-  char drink = "";
+  char drink[] = "";
   
   // read button state
   for (int i = 0; i < nb; i++) {
@@ -73,22 +77,23 @@ void loop() {
 
   // if a button was toggled, output is HIGH, go make the drink
   if (out_state[0] == HIGH) {
-    strcpy(drink, "Margarita");
+    drink[9] = "margarita";
   }
 
   if (out_state[1] == HIGH) {
-    strcpy(drink, "Zoo");
+    drink[3] = "zoo";
   }
 
   if (out_state[2] == HIGH) {
-    strcpy(drink, "Tequila Sunrise");
+    drink[10] = "screwdriver";
   }
 
   if (out_state[3] == HIGH) {
-    strcpy(drink, "Rum & Coke");
+    drink[15] = "tequila sunrise";
   }
-
+  
   // for debugging
+  delay(1000);
   testPrint();
 
   if (publish == true) {
