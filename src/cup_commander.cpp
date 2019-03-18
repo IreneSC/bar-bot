@@ -37,6 +37,7 @@ static const std::string COKE("coke");
 static const std::string SPRITE("sprite");
 static const std::string VODKA("vodka?");
 static const std::string RUM("rum");
+static const std::string OJ("orange juice");
 static std::unordered_map<std::string, geometry_msgs::Point> det_positions;
 // mixed drink definitions
 static const std::vector<std::string> MARGARITA{SPRITE, COKE};
