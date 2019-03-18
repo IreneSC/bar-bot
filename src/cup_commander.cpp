@@ -98,7 +98,8 @@ void processArmPose(const geometry_msgs::PoseStamped& arm_pose) {
 
 void processDrinkRequest(const std_msgs::String& drinkType) {
     std::vector<std::string> mixedDrink = det_ingredients[drinkType.data];
-    std::copy(mixedDrink.begin(), mixedDrink.end(), drinkQueue.end());
+    if(drinkQueue.empty())
+        std::copy(mixedDrink.begin(), mixedDrink.end(), drinkQueue.end());
 }
 
 static double hypot(double x, double y, double z) {
@@ -133,20 +134,6 @@ std::string popDrink() {
     std::string drink = drinkQueue.front();
     drinkQueue.erase(drinkQueue.begin());
     return drink;
-}
-
-// Sequence to pour a mixed drink
-void pourMixedDrink()  {
-    // stall until drink request arrives
-    while (drinkQueue.size() == 0) {
-        ROS_INFO("Waiting for drink request");
-    } 
-
-    std::string drink;
-    while (drinkQueue.size() != 0) {
-        drink = popDrink();
-        pourDrinkIntoCup(drink);
-    }
 }
 
 // Returns where it picked it up
@@ -382,6 +369,19 @@ void pourDrinkIntoCup(std::string drink) {
     replaceDrink(drink, loc);
 }
 
+// Sequence to pour a mixed drink
+void pourMixedDrink()  {
+    // stall until drink request arrives
+    while (drinkQueue.size() == 0) {
+        ROS_INFO("Waiting for drink request");
+    } 
+
+    std::string drink;
+    while (drinkQueue.size() != 0) {
+        drink = popDrink();
+        pourDrinkIntoCup(drink);
+    }
+}
 
 static bool moveWithFailureChecking(bar_bot::Mobility mobility) {
     mobility.response.target_reached = false;
@@ -469,7 +469,7 @@ int main(int argc, char **argv) {
         &processDetections);
     current_pose_subscriber = nh.subscribe(current_pose_topic, 10,
         &processArmPose);
-    drink_subscriber = nh.subscribe(drink_type_topic, 10,
+    drink_subscriber = nh.subscribe(drink_type_topic, 1,
         &processDrinkRequest);
 
     goHome();
