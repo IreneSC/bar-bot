@@ -54,11 +54,11 @@ static const std::vector<std::string> ZOO{SPRITE, VODKA, OJ, TEQUILA, GRENADINE}
 static std::unordered_map<std::string, std::vector<std::string>> det_ingredients {
     {"margarita", MARGARITA},
     {"screwdriver", SCREWDRIVER},
-    {"tequila sunrise", TEQUILA_SUNRISE},
+    {"tequilasunrise", TEQUILA_SUNRISE},
     {"sunrise", SUNRISE},
     {"vodka sprite", VODKA_SPRITE},
-    {"tequila sprite", TEQUILA_SPRITE},
-    {"shirley temple", SURELY},
+    {"tequilasprite", TEQUILA_SPRITE},
+    {"shirleytemple", SURELY},
     {"zoo", ZOO}
 };
 
@@ -80,14 +80,9 @@ static void pourDrinkIntoCup(std::string drink);
 
 static geometry_msgs::Point retrieveDrink(std::string drink);
 static void pourIntoTarget(std::string drink);
-<<<<<<< HEAD
-static void replaceDrink(std::string drink, geometry_msgs::Point end_loc);
-static void saltTheCup();
-
-
-=======
 static void replaceDrink(std::string drink);
->>>>>>> 52ead4f554313399c0fefcb7fb498cbb6ed68b06
+
+static void saltTheCup();
 
 static void pourMixedDrink();
 static void processDrinkRequest(const std_msgs::String& drinkType);
@@ -112,7 +107,11 @@ static inline std::string getHomeName(std::string name) {
 //     // ROS_ERROR("got a cup");
 // }
 
+geometry_msgs::Point cup_home;
+
 void processDetections(const bar_bot::Detections& dets) {
+    det_positions.clear();
+    det_positions[getHomeName(CUP)] = cup_home;
     for (int i = 0; i < (int) dets.detection_types.size(); i++) {
         const std::string& type = dets.detection_types[i];
         det_positions[type] = dets.detection_positions[i];
@@ -134,6 +133,10 @@ void processArmPose(const geometry_msgs::PoseStamped& arm_pose) {
 
 void processDrinkRequest(const std_msgs::String& drinkType) {
     ROS_INFO("I heard: %s", drinkType.data.c_str());
+    if (drinkQueue.size() > 0) {
+        ROS_WARN("I already have %d ingredients left, ignoring request", (int) drinkQueue.size());
+        return;
+    }
     std::string drink = drinkType.data.c_str();
     std::vector<std::string> mixedDrink = det_ingredients[drink];
     drinkQueue = mixedDrink;
@@ -182,10 +185,10 @@ void scanForObject(std::string target, bool close_gripper) {
     bar_bot::Mobility mobility;
     float radius = 0.35;
     float height = 0.45;
-    float scan_time = 3.0;
+    float scan_time = 4.0;
     int points = 3;
-    float start_theta = -M_PI/6;
-    float end_theta = M_PI/2;
+    float start_theta = -M_PI/4;
+    float end_theta =  M_PI/2;
 
     float step = (end_theta - start_theta)/points;
     float theta =  start_theta;
@@ -200,15 +203,16 @@ void scanForObject(std::string target, bool close_gripper) {
         mobility.request.target_loc.z  = 0.45;
         while(!moveWithFailureChecking(mobility)){
         }
-        ros::Duration(0.5).sleep();
+        ros::Duration(0.85).sleep();
         ros::spinOnce();
         if (det_positions.count(target)>0) {
+            ROS_INFO_STREAM("Found target: " << target);
             break;
         }
-        if(theta > end_theta || theta < start_theta){
+        theta +=step;
+        if(theta >= end_theta || theta <= start_theta){
             step *= -1;
         }
-        theta +=step;
     }
 }
 
@@ -304,17 +308,15 @@ geometry_msgs::Point retrieveDrink(std::string drink) {
     ROS_INFO("back up");
     while(ros::ok()){
         ros::spinOnce();
-        if (det_positions.count(drink)>0) {
-            mobility.request.target_loc         = saved_pos;
-            mobility.request.close_gripper      = true;
-            mobility.request.move_time          = 1.25; // Seconds
+        mobility.request.target_loc         = saved_pos;
+        mobility.request.close_gripper      = true;
+        mobility.request.move_time          = 1.25; // Seconds
 
-            mobility.request.target_loc.x *= .8;
-            mobility.request.target_loc.y *= .8;
-            mobility.request.target_loc.z = height;
-            if(moveWithFailureChecking(mobility)) {
-                break;
-            }
+        mobility.request.target_loc.x *= .8;
+        mobility.request.target_loc.y *= .8;
+        mobility.request.target_loc.z = height;
+        if(moveWithFailureChecking(mobility)) {
+            break;
         }
     }
 
@@ -525,7 +527,8 @@ void pourMixedDrink()  {
     std::string drink;
     while (drinkQueue.size() != 0) {
         drink = popDrink();
-        if (drink.compare("salt") == 0) {
+        ROS_INFO_STREAM("drink is: " << drink);
+        if (drink.compare(SALTYY) == 0) {
             kissMySaltyAss();
         } else {
             pourDrinkIntoCup(drink);
@@ -615,6 +618,10 @@ int main(int argc, char **argv) {
 
     detection_topic = "/bar_bot/detections";
 
+    cup_home.x = .0;
+    cup_home.y = .75;
+    cup_home.z = .1;
+
     // if (!nh.getParam("cup_detection_topic", cup_detection_topic))
     // {
     //   ROS_ERROR("cup_detection_topic param not specified");
@@ -658,10 +665,14 @@ int main(int argc, char **argv) {
     // pourBeer();
     // pourDrinkIntoCup(SPRITE);
     // pourDrinkIntoCup(GRENADINE);
-    pourDrinkIntoCup(OJ);
+    // kissMySaltyAss();
+    // pourDrinkIntoCup(OJ);
     // // trackCups();
 
-    // pourMixedDrink();
+    while(ros::ok()) {
+        pourMixedDrink();
+        ros::spinOnce();
+    }
     // goHomeCup();
 
     while(ros::ok()) {
@@ -761,20 +772,24 @@ void saltTheCup() {
     mobility.request.is_blocking        = true;
     mobility.request.use_trajectory     = true;
 
-    const double height = .285;
-    const double scale  = .985;
+    const double height         = .285;
+    const double height_down    = .02;
+    const double offset         = .15;
 
     // Move to above salt plate
     while(ros::ok()){
         ros::spinOnce();
         if (det_positions.count(SALTYY)>0) {
-            auto target                         = det_positions[SALTYY]; //furthestPointFromTip();
+            auto target     = det_positions[SALTYY]; //furthestPointFromTip();
+            double theta    = atan2(target.y, target.x);
+            double radius   = sqrt(target.x * target.x + target.y * target.y);
+            target.x        = (radius - offset) * cos(theta);
+            target.y        = (radius - offset) * sin(theta);
+
             mobility.request.target_loc         = target;
             mobility.request.close_gripper      = true;
             mobility.request.move_time          = 2.5; // Seconds
 
-            mobility.request.target_loc.x *= scale;
-            mobility.request.target_loc.y *= scale;
             mobility.request.target_loc.z = height;
             if(moveWithFailureChecking(mobility)) {
                 break;
@@ -791,12 +806,14 @@ void saltTheCup() {
         ros::spinOnce();
         if (det_positions.count(SALTYY)>0) {
             target                              = det_positions[SALTYY]; //furthestPointFromTip();
+            double theta    = atan2(target.y, target.x);
+            double radius   = sqrt(target.x * target.x + target.y * target.y);
+            target.x        = (radius - offset) * cos(theta);
+            target.y        = (radius - offset) * sin(theta);
             mobility.request.target_loc         = target;
             mobility.request.close_gripper      = true;
             mobility.request.move_time          = .75; // Seconds
 
-            mobility.request.target_loc.x *= scale;
-            mobility.request.target_loc.y *= scale;
             mobility.request.target_loc.z = height;
             if(moveWithFailureChecking(mobility)) {
                 break;
@@ -804,31 +821,78 @@ void saltTheCup() {
         }
     }
 
-    // SALT!
+    // Flip the cup upside down
+    ROS_INFO("Flip upside down");
     while(ros::ok()){
-        if (det_positions.count(SALTYY)>0) {
-            mobility.request.target_loc         = target;
-            mobility.request.close_gripper      = true;
-            mobility.request.move_time          = 7; // Seconds
-            mobility.request.salting_cup        = true;
+        mobility.request.target_loc         = target;
+        mobility.request.close_gripper      = true;
+        mobility.request.move_time          = 2; // Seconds
+        mobility.request.pour_angle         = M_PI;
+        mobility.request.disable_collisions = true;
+        // mobility.request.salting_cup        = true;
 
-            mobility.request.target_loc.x *= scale;
-            mobility.request.target_loc.y *= scale;
-            mobility.request.target_loc.z = height;
-            if(moveWithFailureChecking(mobility)) {
-                break;
-            }
+        mobility.request.target_loc.z = height;
+        if(moveWithFailureChecking(mobility)) {
+            break;
+        }
+        ros::spinOnce();
+    }
+
+    ROS_INFO("Touch the ground");
+    while(ros::ok()){
+        mobility.request.target_loc         = target;
+        mobility.request.close_gripper      = true;
+        mobility.request.move_time          = 2; // Seconds
+        mobility.request.pour_angle         = M_PI;
+        mobility.request.disable_collisions = true;
+        // mobility.request.salting_cup        = true;
+
+        mobility.request.target_loc.z = height_down;
+        if(moveWithFailureChecking(mobility)) {
+            break;
+        }
+        ros::spinOnce();
+    }
+
+    // Back up
+    ROS_INFO("raise up");
+    while(ros::ok()){
+        mobility.request.target_loc         = target;
+        mobility.request.close_gripper      = true;
+        mobility.request.move_time          = 2; // Seconds
+        mobility.request.pour_angle         = M_PI;
+        mobility.request.disable_collisions = true;
+        // mobility.request.salting_cup        = true;
+
+        mobility.request.target_loc.z = height;
+        if(moveWithFailureChecking(mobility)) {
+            break;
+        }
+        ros::spinOnce();
+    }
+
+    ROS_INFO("unflip");
+    while(ros::ok()){
+        mobility.request.target_loc         = target;
+        mobility.request.close_gripper      = true;
+        mobility.request.move_time          = 2; // Seconds
+        mobility.request.pour_angle         = 0;
+        mobility.request.disable_collisions = true;
+        // mobility.request.salting_cup        = true;
+
+        mobility.request.target_loc.z = height;
+        if(moveWithFailureChecking(mobility)) {
+            break;
         }
         ros::spinOnce();
     }
 }
 
 void kissMySaltyAss() {
-    goHomeBottle();
+    scanForObject(CUP, true);
     auto loc_drink = retrieveDrink(CUP);
-    goHomeBottle();
+    scanForObject(SALTYY, true);
     saltTheCup();
-    goHomeBottle();
-    replaceDrink(CUP, loc_drink);
-    goHomeCup();
+    replaceDrink(CUP);
+    goHomeCup(false);
 }

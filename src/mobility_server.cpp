@@ -22,7 +22,7 @@ static sensor_msgs::JointState  feedback_joint_state;
 
 // Function parameters for tuning
 static constexpr double max_dist = 0.005; // meters, move_to function
-static constexpr double tol_def = 0.55; // Default tolerance
+static constexpr double tol_def = 0.65; // Default tolerance
 // Max difference between actual and predicted speeds, per joint
 static constexpr double tolerance[] = {tol_def, tol_def, tol_def, tol_def, tol_def, 1.2, 1.2}; 
 static constexpr double time_deadzone = 0.15; // Time zone (s) in which collisions
