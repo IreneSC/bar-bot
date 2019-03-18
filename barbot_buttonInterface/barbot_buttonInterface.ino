@@ -1,3 +1,7 @@
+#include <ArduinoTcpHardware.h>
+#include <ArduinoHardware.h>
+#include <ros.h>
+
 /*
  * BARBOT
  * Button Interface
@@ -30,12 +34,13 @@ long time[nb]           = {0, 0, 0, 0};             // the last time the output 
 long debounce           = 200;                      // debounce time, increase if buggy
 bool publish            = false;                     // only publish when somthing has changed
 
+const char MARGARITA[] = "margarita";
 
 // initialize ROS stuff
 ros::NodeHandle nh;
 
 std_msgs::String str_msg;
-ros::Publisher buttons("pushed", &str_msg);
+ros::Publisher buttons("drink_type_topic", &str_msg);
 
 
 void setup() {
@@ -77,7 +82,7 @@ void loop() {
 
   // if a button was toggled, output is HIGH, go make the drink
   if (out_state[0] == HIGH) {
-    drink[9] = "margarita";
+    drink[0] = "margarita";
   }
 
   if (out_state[1] == HIGH) {

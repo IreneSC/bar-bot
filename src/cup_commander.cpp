@@ -100,6 +100,7 @@ void processDrinkRequest(const std_msgs::String& drinkType) {
     std::vector<std::string> mixedDrink = det_ingredients[drinkType.data];
     if(drinkQueue.empty())
         std::copy(mixedDrink.begin(), mixedDrink.end(), drinkQueue.end());
+    ROS_INFO("I heard: %s", drinkType.data);
 }
 
 static double hypot(double x, double y, double z) {
@@ -475,10 +476,10 @@ int main(int argc, char **argv) {
     goHome();
 
     // pourCups();
-    // backAndForth();
+    backAndForth();
     // trackCups();
     // pourBeer();
-    pourDrinkIntoCup(SPRITE);
+    // pourDrinkIntoCup(SPRITE);
     // trackCups();
 
     goHome();
