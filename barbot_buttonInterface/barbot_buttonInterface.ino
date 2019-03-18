@@ -83,8 +83,8 @@ void loop() {
 
   // if a button was toggled, output is HIGH, go make the drink
   if (out_state[0] == HIGH) {
-    str_msg.data = MARGARITA;
-    //Serial.println(MARGARITA);
+    str_msg.data = TEQUILASUNRISE;
+    //Serial.println(TEQUILASUNRISE);
   }
 
   if (out_state[1] == HIGH) {
@@ -98,13 +98,13 @@ void loop() {
   }
 
   if (out_state[3] == HIGH) {
-    str_msg.data = TEQUILASUNRISE;
-    //Serial.println(TEQUILASUNRISE);
+    str_msg.data = MARGARITA;
+    //Serial.println(MARGARITA);
   }
 
     if (out_state[4] == HIGH) {
-    str_msg.data = SUNRISE;
-    //Serial.println(SUNRISE);
+    str_msg.data = TEQUILA_SPRITE;
+    //Serial.println(TEQUILA_SPRITE);
   }
 
   if (out_state[5] == HIGH) {
@@ -113,8 +113,8 @@ void loop() {
   }
 
   if (out_state[6] == HIGH) {
-    str_msg.data = TEQUILA_SPRITE;
-    //Serial.println(TEQUILA_SPRITE);
+    str_msg.data = SUNRISE;
+    //Serial.println(SUNRISE);
   }
 
   if (out_state[7] == HIGH) {
