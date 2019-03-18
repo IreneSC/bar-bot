@@ -171,6 +171,36 @@ std::string popDrink() {
     return drink;
 }
 
+void scanForObject(std::string target){
+    bar_bot::Mobility mobility;
+    float radius = 0.35;
+    float height = 0.45;
+    float scan_time = 4.0;
+    int points = 4;
+    float start_theta = M_PI/2;
+    float end_theta = -M_PI/6;
+
+    float step = (end_theta - start_theta)/points;
+    float theta =  start_theta;
+    while(ros::ok){
+        mobility.request.close_gripper      = false;
+        mobility.request.move_time          = scan_time / points; // Seconds
+
+        mobility.request.target_loc.x  = radius * cos(theta);
+        mobility.request.target_loc.y  = radius * sin(theta);
+        mobility.request.target_loc.z  = 0.45;
+        while(!moveWithFailureChecking(mobility)){
+        }
+        ros::spinOnce();
+        if (det_positions.count(target)>0) {
+            break;
+        }
+        if(theta >= end_theta || theta <= start_theta){
+            step *=-1;
+        }
+        theta +=step;
+    }
+}
 // Returns where it picked it up
 geometry_msgs::Point retrieveDrink(std::string drink) {
     // Move above the cup
@@ -327,7 +357,7 @@ void pourIntoTarget(std::string drink) {
     // Wait until we get a new cup detection
     ros::Duration(1).sleep();
 
-    // Recenter above the cup, and save that as the target to pour over 
+    // Recenter above the cup, and save that as the target to pour over
     geometry_msgs::Point target;
     while(ros::ok()){
         ros::spinOnce();
@@ -452,7 +482,7 @@ void pourMixedDrink()  {
     while (drinkQueue.size() == 0) {
         ROS_INFO_THROTTLE(1, "Waiting for drink request");
         ros::spinOnce();
-    } 
+    }
 
     std::string drink;
     while (drinkQueue.size() != 0) {
@@ -492,7 +522,7 @@ void goHomeCup(bool close_gripper) {
     ros::spinOnce();
     while (true) {
         temp_mobility.response.target_reached = false;
-        mobility_client.call(temp_mobility); 
+        mobility_client.call(temp_mobility);
         if(temp_mobility.response.target_reached)
             break;
         ros::Duration(2).sleep();
@@ -518,7 +548,7 @@ void goHomeBottle(bool close_gripper) {
     ros::spinOnce();
     while (true) {
         temp_mobility.response.target_reached = false;
-        mobility_client.call(temp_mobility); 
+        mobility_client.call(temp_mobility);
         if(temp_mobility.response.target_reached)
             break;
         ros::Duration(2).sleep();
