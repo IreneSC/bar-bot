@@ -63,10 +63,10 @@ def process_images(depth_image, color_image):
     # Finding the cup
     result_img, rectangles = find_cups(color_image)
     detections ={}
-    detections["cup"] = []
+    detections["Cup"] = []
     for rect in rectangles:
         cx, cy = get_contour_centroid(rect)
-        detections["cup"].append((cx,cy))
+        detections["Cup"].append((cx,cy))
 
 
     return detections, result_img

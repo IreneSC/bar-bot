@@ -32,34 +32,32 @@ static geometry_msgs::PointStamped last_arm_pos;
 // static ros::Duration detection_expiration(1.0);
 
 // Set up map of detections
-static const std::string CUP("cup");
-static const std::string COKE("coke");
-static const std::string SPRITE("sprite");
-static const std::string VODKA("vodka");
-static const std::string RUM("rum");
-static const std::string OJ("orange juice");
-static const std::string TECHY("tequila");
-static const std::string GRENNY("grenadine");
-static const std::string SALTYY("salt");
+static const std::string CUP("Cup");
+static const std::string SPRITE("Sprite");
+static const std::string VODKA("Vodka");
+static const std::string OJ("Orange Juice");
+static const std::string TEQUILA("Tequila");
+static const std::string GRENADINE("Grenadine");
+static const std::string SALTYY("Salt");
 
 
 static std::unordered_map<std::string, geometry_msgs::Point> det_positions;
 // mixed drink definitions
-static const std::vector<std::string> MARGARITA{TECHY, OJ, SALTYY};
+static const std::vector<std::string> MARGARITA{SALTYY, TEQUILA, OJ};
 static const std::vector<std::string> SCREWDRIVER{VODKA, OJ};
-static const std::vector<std::string> TECHY_SUN{TECHY, GRENNY, OJ, SPRITE};
-static const std::vector<std::string> SUNRISE{GRENNY, OJ, SPRITE};
-static const std::vector<std::string> VOD_SPRITE{SPRITE, VODKA};
-static const std::vector<std::string> TEQ_SPRITE{SPRITE, TECHY};
-static const std::vector<std::string> SURELY{SPRITE, GRENNY};
-static const std::vector<std::string> ZOO{COKE, SPRITE, VODKA, RUM, OJ, TECHY, GRENNY};
+static const std::vector<std::string> TEQUILA_SUNRISE{TEQUILA, GRENADINE, OJ, SPRITE};
+static const std::vector<std::string> SUNRISE{GRENADINE, OJ, SPRITE};
+static const std::vector<std::string> VODKA_SPRITE{SPRITE, VODKA};
+static const std::vector<std::string> TEQUILA_SPRITE{SPRITE, TEQUILA};
+static const std::vector<std::string> SURELY{SPRITE, GRENADINE};
+static const std::vector<std::string> ZOO{SPRITE, VODKA, OJ, TEQUILA, GRENADINE};
 static std::unordered_map<std::string, std::vector<std::string>> det_ingredients {
     {"margarita", MARGARITA},
     {"screwdriver", SCREWDRIVER},
-    {"tequila sunrise", TECHY_SUN},
+    {"tequila sunrise", TEQUILA_SUNRISE},
     {"sunrise", SUNRISE},
-    {"vodka sprite", VOD_SPRITE},
-    {"tequila sprite", TEQ_SPRITE},
+    {"vodka sprite", VODKA_SPRITE},
+    {"tequila sprite", TEQUILA_SPRITE},
     {"shirley temple", SURELY},
     {"zoo", ZOO}
 };
@@ -81,15 +79,23 @@ static void pourDrinkIntoCup(std::string drink);
 
 static geometry_msgs::Point retrieveDrink(std::string drink);
 static void pourIntoTarget(std::string drink);
+<<<<<<< HEAD
 static void replaceDrink(std::string drink, geometry_msgs::Point end_loc);
 static void saltTheCup();
 
 
+=======
+static void replaceDrink(std::string drink);
+>>>>>>> 52ead4f554313399c0fefcb7fb498cbb6ed68b06
 
 static void pourMixedDrink();
 static void processDrinkRequest(const std_msgs::String& drinkType);
 static void kissMySaltyAss(); 
 static std::vector<std::string> drinkQueue;
+
+static inline std::string getHomeName(std::string name) {
+    return name + " Home";
+}
 
 // Constants for looking for a cup
 // static const float scanning_z = .20;//m
@@ -171,6 +177,36 @@ std::string popDrink() {
     return drink;
 }
 
+void scanForObject(std::string target){
+    bar_bot::Mobility mobility;
+    float radius = 0.35;
+    float height = 0.45;
+    float scan_time = 4.0;
+    int points = 4;
+    float start_theta = M_PI/2;
+    float end_theta = -M_PI/6;
+
+    float step = (end_theta - start_theta)/points;
+    float theta =  start_theta;
+    while(ros::ok){
+        mobility.request.close_gripper      = false;
+        mobility.request.move_time          = scan_time / points; // Seconds
+
+        mobility.request.target_loc.x  = radius * cos(theta);
+        mobility.request.target_loc.y  = radius * sin(theta);
+        mobility.request.target_loc.z  = 0.45;
+        while(!moveWithFailureChecking(mobility)){
+        }
+        ros::spinOnce();
+        if (det_positions.count(target)>0) {
+            break;
+        }
+        if(theta >= end_theta || theta <= start_theta){
+            step *=-1;
+        }
+        theta +=step;
+    }
+}
 // Returns where it picked it up
 geometry_msgs::Point retrieveDrink(std::string drink) {
     // Move above the cup
@@ -303,7 +339,7 @@ void pourIntoTarget(std::string drink) {
     mobility.request.is_blocking        = true;
     mobility.request.use_trajectory     = true;
 
-    const double height = .285;
+    const double height = .35;
     const double scale  = .985;
 
     // Move to above other cup
@@ -321,13 +357,15 @@ void pourIntoTarget(std::string drink) {
             if(moveWithFailureChecking(mobility)) {
                 break;
             }
+        } else {
+            ROS_INFO_THROTTLE(1, "Can't find drink %s", drink.c_str());
         }
     }
 
     // Wait until we get a new cup detection
     ros::Duration(1).sleep();
 
-    // Recenter above the cup, and save that as the target to pour over 
+    // Recenter above the cup, and save that as the target to pour over
     geometry_msgs::Point target;
     while(ros::ok()){
         ros::spinOnce();
@@ -354,7 +392,7 @@ void pourIntoTarget(std::string drink) {
             mobility.request.close_gripper      = true;
             mobility.request.move_time          = 7; // Seconds
             mobility.request.pouring_beer       = true;
-            mobility.request.beer_nh            = 0.15;
+            mobility.request.beer_nh            = 0.2;
             mobility.request.beer_gh            = 0.14;
 
             mobility.request.target_loc.x *= scale;
@@ -368,8 +406,8 @@ void pourIntoTarget(std::string drink) {
     }
 }
 
-void replaceDrink(std::string drink, geometry_msgs::Point end_loc) {
-    const static double scale = 0.97;
+void replaceDrink(std::string drink) {
+    const static double scale = 1;
 
     bar_bot::Mobility mobility;
     mobility.request.disable_collisions = false;
@@ -380,53 +418,70 @@ void replaceDrink(std::string drink, geometry_msgs::Point end_loc) {
     mobility.request.beer_nh            = 0;
     mobility.request.beer_gh            = 0;
 
-    mobility.request.target_loc         = end_loc; // furthestPointFromTip();
-    mobility.request.close_gripper      = true;
-    mobility.request.move_time          = 2.5; // Seconds
+    std::string home_drink = getHomeName(drink);
+    geometry_msgs::Point home;
+    while(ros::ok()){
+        if (det_positions.count(home_drink)>0) {
+            home    = det_positions[home_drink];
+            double theta = atan2(home.y, home.x);
+            double radius = sqrt(home.x * home.x + home.y * home.y);
+            home.x  = (radius - .095) * cos(theta);
+            home.y  = (radius - .095) * sin(theta);
 
-    mobility.request.target_loc.z = 0.5;
-    moveWithFailureChecking(mobility);
+            mobility.request.target_loc         = home;
+            mobility.request.close_gripper      = true;
+            mobility.request.move_time          = 2.5; // Seconds
+
+            mobility.request.target_loc.z = 0.5;
+            if(moveWithFailureChecking(mobility)) {
+                break;
+            }
+        }
+        ros::spinOnce();
+    }
+
+    const double drop_height = 0.08;
 
     // All the way to the ground
-    mobility.request.target_loc         = end_loc; // furthestPointFromTip();
+    mobility.request.target_loc         = home;
     mobility.request.close_gripper      = true;
     mobility.request.move_time          = 1.35; // Seconds
     mobility.request.disable_collisions = true;
 
     mobility.request.target_loc.x *= scale;
     mobility.request.target_loc.y *= scale;
-    mobility.request.target_loc.z = 0.05;
+    mobility.request.target_loc.z = drop_height;
     moveWithFailureChecking(mobility);
 
     ros::Duration(1).sleep(); // Make sure you're really on the ground
 
     // Release! I said, release boy!
-    mobility.request.target_loc         = end_loc; // furthestPointFromTip();
+    mobility.request.target_loc         = home;
     mobility.request.close_gripper      = false;
     mobility.request.move_time          = 1.5; // Seconds
     mobility.request.disable_collisions = true;
 
     mobility.request.target_loc.x *= scale;
     mobility.request.target_loc.y *= scale;
-    mobility.request.target_loc.z = 0.05;
+    mobility.request.target_loc.z = drop_height;
     moveWithFailureChecking(mobility);
 
     ros::Duration(6).sleep();
 
     // Back it up
-    mobility.request.target_loc         = end_loc; // furthestPointFromTip();
+    mobility.request.target_loc         = home;
     mobility.request.close_gripper      = false;
     mobility.request.move_time          = 3; // Seconds
     mobility.request.disable_collisions = false;
 
     mobility.request.target_loc.x *= .8;
     mobility.request.target_loc.y *= .8;
-    mobility.request.target_loc.z = 0.05;
+    mobility.request.target_loc.z = 0.1;
     moveWithFailureChecking(mobility);
 
 
     // Back it up TO THE SKY BABY
-    mobility.request.target_loc         = end_loc; // furthestPointFromTip();
+    mobility.request.target_loc         = home;
     mobility.request.close_gripper      = false;
     mobility.request.move_time          = 3; // Seconds
     mobility.request.disable_collisions = false;
@@ -440,11 +495,15 @@ void replaceDrink(std::string drink, geometry_msgs::Point end_loc) {
 
 void pourDrinkIntoCup(std::string drink) {
     auto loc = retrieveDrink(drink);
+    ROS_INFO("drink retrieved: %s", drink.c_str());
     goHomeCup(true);
     pourIntoTarget(CUP);
+    ROS_INFO("drink poured into cup: %s", drink.c_str());
     goHomeBottle(true);
-    replaceDrink(drink, loc);
+    replaceDrink(drink);
+    ROS_INFO("drink placed: %s", drink.c_str());
     goHomeBottle();
+    ROS_INFO("done with %s", drink.c_str());
 }
 
 // Sequence to pour a mixed drink
@@ -453,7 +512,7 @@ void pourMixedDrink()  {
     while (drinkQueue.size() == 0) {
         ROS_INFO_THROTTLE(1, "Waiting for drink request");
         ros::spinOnce();
-    } 
+    }
 
     std::string drink;
     while (drinkQueue.size() != 0) {
@@ -497,7 +556,7 @@ void goHomeCup(bool close_gripper) {
     ros::spinOnce();
     while (true) {
         temp_mobility.response.target_reached = false;
-        mobility_client.call(temp_mobility); 
+        mobility_client.call(temp_mobility);
         if(temp_mobility.response.target_reached)
             break;
         ros::Duration(2).sleep();
@@ -523,7 +582,7 @@ void goHomeBottle(bool close_gripper) {
     ros::spinOnce();
     while (true) {
         temp_mobility.response.target_reached = false;
-        mobility_client.call(temp_mobility); 
+        mobility_client.call(temp_mobility);
         if(temp_mobility.response.target_reached)
             break;
         ros::Duration(2).sleep();
@@ -589,12 +648,12 @@ int main(int argc, char **argv) {
     // backAndForth();
     // trackCups();
     // pourBeer();
-    // pourDrinkIntoCup(SPRITE);
-    // pourDrinkIntoCup(RUM);
-    // pourDrinkIntoCup(COKE);
+    pourDrinkIntoCup(SPRITE);
+    pourDrinkIntoCup(GRENADINE);
+    pourDrinkIntoCup(TEQUILA);
     // // trackCups();
 
-    pourMixedDrink();
+    // pourMixedDrink();
     // goHomeCup();
 
     while(ros::ok()) {
