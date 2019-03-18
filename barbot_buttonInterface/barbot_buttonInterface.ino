@@ -17,23 +17,27 @@
 #include <std_msgs/String.h>
 
 // num buttons
-const int nb = 4;
+const int nb = 8;
 
 // set pins
-const int b_PIN[nb] = {3, 5, 7, 9};
+const int b_PIN[nb] = {3, 4, 5, 6, 7, 8, 9, 10};
 
-int b_state[nb]     = {LOW, LOW, LOW, LOW};     // current button state, initialize to up -> LOW
-int b_previous[nb]  = {LOW, LOW, LOW, LOW};     // previous button state, initialize to LOW
-int out_state[nb]   = {LOW, LOW, LOW, LOW};     // output state, changes when button recently toggled
+int b_state[nb]     = {LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW};     // current button state, initialize to up -> LOW
+int b_previous[nb]  = {LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW};     // previous button state, initialize to LOW
+int out_state[nb]   = {LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW};     // output state, changes when button recently toggled
 
-long time[nb]           = {0, 0, 0, 0};             // the last time the output was toggled
-long debounce           = 200;                      // debounce time, increase if buggy
-bool publish            = false;                     // only publish when somthing has changed
+long time[nb]           = {0, 0, 0, 0, 0, 0, 0, 0};                 // the last time the output was toggled
+long debounce           = 200;                                      // debounce time, increase if buggy
+bool publish            = false;                                    // only publish when somthing has changed
 
 const char MARGARITA[]      = "margarita";
 const char ZOO[]            = "zoo";
 const char TEQUILASUNRISE[] = "tequilasunrise";
 const char SCREWDRIVER[]    = "screwdriver";
+const char SUNRISE[]        = "sunrise";
+const char VODKA_SPRITE[]   = "vodka sprite";
+const char TEQUILA_SPRITE[] = "tequilasprite";
+const char SHIRLEY_TEMPLE[] = "shirleytemple";
 
 // initialize ROS stuff
 ros::NodeHandle nh;
@@ -43,7 +47,7 @@ ros::Publisher buttons("drink_type_topic", &str_msg);
 
 
 void setup() {
-  //Serial.begin(9600);
+  //Serial.begin(9600); // just use Arduino serial for debugging get rid of it when using rosserial
 
   // set all buttons to input
   for (int i = 0; i < nb; i++) {
@@ -63,8 +67,6 @@ void setup() {
 }
 
 void loop() {
-
-  char drink[] = "";
   
   // read button state
   for (int i = 0; i < nb; i++) {
@@ -98,6 +100,26 @@ void loop() {
   if (out_state[3] == HIGH) {
     str_msg.data = TEQUILASUNRISE;
     //Serial.println(TEQUILASUNRISE);
+  }
+
+    if (out_state[4] == HIGH) {
+    str_msg.data = SUNRISE;
+    //Serial.println(SUNRISE);
+  }
+
+  if (out_state[5] == HIGH) {
+    str_msg.data = VODKA_SPRITE;
+    //Serial.println(VODKA_SPRITE);
+  }
+
+  if (out_state[6] == HIGH) {
+    str_msg.data = TEQUILA_SPRITE;
+    //Serial.println(TEQUILA_SPRITE);
+  }
+
+  if (out_state[7] == HIGH) {
+    str_msg.data = SHIRLEY_TEMPLE;
+    //Serial.println(SHIRLEY_TEMPLE);
   }
   
   // for debugging
