@@ -72,7 +72,7 @@ def process_images(depth_image, color_image):
                 center_x +=hull[j][0]/n
                 center_y +=hull[j][1]/n
             center = (center_x + x_min, center_y + y_min)
-            print("center: ", center)
+            # print("center: ", center)
             if obj.data in detections:
                 detections[obj.data].append(center)
             else:
