@@ -21,7 +21,7 @@ static geometry_msgs::PoseStamped feedback_pose;
 static sensor_msgs::JointState  feedback_joint_state;
 
 // Function parameters for tuning
-static constexpr double max_dist = 0.05; // meters, move_to function
+static constexpr double max_dist = 0.005; // meters, move_to function
 static constexpr double tol_def = 0.55; // Default tolerance
 // Max difference between actual and predicted speeds, per joint
 static constexpr double tolerance[] = {tol_def, tol_def, tol_def, tol_def, tol_def, 1.2, 1.2}; 
@@ -169,6 +169,7 @@ static bool followTrajectory() {
     sensor_msgs::JointState cmdMsg;
     cmdMsg.position.resize(num_joints);
     cmdMsg.velocity.resize(num_joints);
+    cmdMsg.effort.resize(num_joints);
 
     // Advance time, but hold at t=0 to stay at the final position.
     // double t = (ros::Time::now() - prev_time).toSec();
@@ -178,6 +179,8 @@ static bool followTrajectory() {
     if (t > 0.0)
         t = 0.0;
 
+    double theta_pitch1 = feedback_joint_state.position[1];
+    double theta_pitch2 = feedback_joint_state.position[2];
     // Compute the new position and velocity commands.
     if (!pouring) {
         for (int i = 0 ; i < num_joints ; i++)
@@ -187,6 +190,13 @@ static bool followTrajectory() {
 
             cmdMsg.position[i] = q[i];
             cmdMsg.velocity[i] = qdot[i];
+            cmdMsg.effort[i]   = 0;
+
+            // -6 nM for pitch 2
+            // -6 * cos(pitch1 + pitch2)
+
+            // -16.5 nM for pitch 1 to -10.2 nM
+            // -10 * cos(pitch1) + -6 * cos(pitch1 + pitch2)
             // We only check if we're in the middle of the trajectory
             if (feedback_ready && !disable_collisions &&
                     time_since_start > time_deadzone && time_till_end > time_deadzone) {
@@ -221,10 +231,15 @@ static bool followTrajectory() {
                         // ", current loc: " << feedback_pose.pose.position);
 
         cmdMsg             = positionToJointAngles(traj_loc);
+        cmdMsg.effort.resize(num_joints);
         // Set the gripper position regardless
         q[5]               = a[5]+t*(b[5]+t*(c[5]+t*d[5]));
         cmdMsg.position[5] = q[5];
     }
+
+    cmdMsg.effort[1]   = -10 * cos(theta_pitch1)
+                            + -6 * cos(theta_pitch1 + theta_pitch2);
+    cmdMsg.effort[2]   = -6 * cos(theta_pitch1 + theta_pitch2);
 
     // Publish.
     cmdMsg.header.stamp = ros::Time::now();
@@ -281,7 +296,7 @@ static bool isSanePosition(const geometry_msgs::Point& pt) {
                      (pt.y > 0    && pt.y < 1)  &&
                      (pt.z > -.05 && pt.z < .55); // Z probably should be positive
     bool sane_distance = sqrt(pt.x*pt.x + pt.y*pt.y + pt.z*pt.z) < 1.5; // reduce to 1.25?
-    bool sane_theta = theta < 2*M_PI/3 && theta > -M_PI/4;
+    bool sane_theta = true; // theta < 2*M_PI/3 && theta > -M_PI/4;
     bool success = sane_axes && sane_distance && sane_theta;
     if (!success)
         ROS_WARN_STREAM("Insane pos: " << pt <<

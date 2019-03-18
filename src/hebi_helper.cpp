@@ -113,6 +113,10 @@ void HebiHelper::goToJointState(sensor_msgs::JointState joints)
         joints.velocity[1] = -joints.velocity[1];
         joints.velocity[2] = -joints.velocity[2];
     }
+    if (joints.effort.size() > 2) {
+        joints.effort[1] = joints.effort[1];
+        joints.effort[2] = joints.effort[2];
+    }
 #endif
     joints.position[4] = pour_angle;
 

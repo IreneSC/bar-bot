@@ -63,6 +63,8 @@ def process_images(depth_image, color_image):
         circclllee = (x_min, y_min)
         for obj, hull in zip(decodedObjects, hulls):
             n = len(hull)
+            if n == 0:
+                continue
             center_x = 0
             center_y = 0
             for j in range(0,n):

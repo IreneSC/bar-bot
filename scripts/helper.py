@@ -53,7 +53,7 @@ def local3d_to_global(local):
     """
     global theta1
     # 3x1 np matrix of offset of camera to global frame
-    cam_offset = [.097, .08, 0.07]
+    cam_offset = [.05, .08, 0.07]
 
     # Global x direction is local z (i.e. planar distance from camera)
     # Global y is local x (left/right in camera frame)
