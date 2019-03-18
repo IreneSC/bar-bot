@@ -292,8 +292,8 @@ static geometry_msgs::Point getPourTrajectory(double t, double beer_ang_init, do
 static bool isSanePosition(const geometry_msgs::Point& pt) {
     double theta = theta1(pt.y, pt.x);
 
-    bool sane_axes = (pt.x > -.3  && pt.x < .7) &&
-                     (pt.y > 0    && pt.y < 1)  &&
+    bool sane_axes = (pt.x > -.3  && pt.x < 1.2) &&
+                     (pt.y > -.5  && pt.y < 1)  &&
                      (pt.z > -.05 && pt.z < .55); // Z probably should be positive
     bool sane_distance = sqrt(pt.x*pt.x + pt.y*pt.y + pt.z*pt.z) < 1.5; // reduce to 1.25?
     bool sane_theta = true; // theta < 2*M_PI/3 && theta > -M_PI/4;
