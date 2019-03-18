@@ -339,7 +339,7 @@ void pourIntoTarget(std::string drink) {
     mobility.request.is_blocking        = true;
     mobility.request.use_trajectory     = true;
 
-    const double height = .35;
+    const double height = .325;
     const double scale  = .985;
 
     // Move to above other cup
@@ -393,7 +393,7 @@ void pourIntoTarget(std::string drink) {
             mobility.request.move_time          = 7; // Seconds
             mobility.request.pouring_beer       = true;
             mobility.request.beer_nh            = 0.2;
-            mobility.request.beer_gh            = 0.14;
+            mobility.request.beer_gh            = 0.1;
 
             mobility.request.target_loc.x *= scale;
             mobility.request.target_loc.y *= scale;
@@ -440,7 +440,7 @@ void replaceDrink(std::string drink) {
         ros::spinOnce();
     }
 
-    const double drop_height = 0.08;
+    const double drop_height = 0.06;
 
     // All the way to the ground
     mobility.request.target_loc         = home;

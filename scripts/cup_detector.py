@@ -20,7 +20,7 @@ SHAPE_RET_THRESHOLD=12
 
 def process_image(img):
     # binary = hue_mask(img, 30, 55, 15, 160,15, 160)
-    binary = hue_mask(img, 27, 58, 10, 170,10, 170)
+    binary = hue_mask(img, 23, 62, 10, 170, 4, 170)
     kernel = np.ones((5,5),np.uint8)
     binary = cv2.erode(binary,kernel,iterations = 7)
     binary = cv2.dilate(binary,kernel,iterations = 7)
