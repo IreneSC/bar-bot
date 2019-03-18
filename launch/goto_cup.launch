@@ -37,4 +37,7 @@
     <!-- <node name="jsp" pkg="joint_state_publisher" type="joint_state_publisher"> -->
     <!--   <param name="use_gui" value="true"/> -->
     <!-- </node> -->
+
+    <!-- Arduino Serial -->
+    <node name="arduino_serial" pkg="rosserial_python" type="serial_node.py" args="_port:=/dev/ttyACM0" />
 </launch>
