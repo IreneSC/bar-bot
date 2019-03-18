@@ -487,9 +487,9 @@ int main(int argc, char **argv) {
 
     // TODO: add back in loop rate?
     while(ros::ok()) {
+        ros::spinOnce();
         if (service_ready)
             followTrajectory();
-        ros::spinOnce();
     }
     ros::shutdown();
 
