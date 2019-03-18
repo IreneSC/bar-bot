@@ -57,6 +57,8 @@ static void backAndForth();
 static void trackCups();
 static void pourBeer();
 
+static void goHome(bool close_gripper = false);
+
 static void pourDrinkIntoCup(std::string drink);
 
 static geometry_msgs::Point retrieveDrink(std::string drink);
@@ -272,7 +274,8 @@ void pourIntoTarget(std::string drink) {
     mobility.request.is_blocking        = true;
     mobility.request.use_trajectory     = true;
 
-    const double height = .25;
+    const double height = .285;
+    const double scale  = .985;
 
     // Move to above other cup
     while(ros::ok()){
@@ -283,6 +286,8 @@ void pourIntoTarget(std::string drink) {
             mobility.request.close_gripper      = true;
             mobility.request.move_time          = 2.5; // Seconds
 
+            mobility.request.target_loc.x *= scale;
+            mobility.request.target_loc.y *= scale;
             mobility.request.target_loc.z = height;
             if(moveWithFailureChecking(mobility)) {
                 break;
@@ -303,6 +308,8 @@ void pourIntoTarget(std::string drink) {
             mobility.request.close_gripper      = true;
             mobility.request.move_time          = .75; // Seconds
 
+            mobility.request.target_loc.x *= scale;
+            mobility.request.target_loc.y *= scale;
             mobility.request.target_loc.z = height;
             if(moveWithFailureChecking(mobility)) {
                 break;
@@ -314,13 +321,15 @@ void pourIntoTarget(std::string drink) {
     while(ros::ok()){
         if (det_positions.count(drink)>0) {
             mobility.request.target_loc         = target;
-            mobility.request.pour_angle         = M_PI*3.0/4;
+            mobility.request.pour_angle         = M_PI*3.5/4;
             mobility.request.close_gripper      = true;
-            mobility.request.move_time          = 4.25; // Seconds
+            mobility.request.move_time          = 7; // Seconds
             mobility.request.pouring_beer       = true;
             mobility.request.beer_nh            = 0.15;
             mobility.request.beer_gh            = 0.14;
 
+            mobility.request.target_loc.x *= scale;
+            mobility.request.target_loc.y *= scale;
             mobility.request.target_loc.z = height;
             if(moveWithFailureChecking(mobility)) {
                 break;
@@ -331,6 +340,8 @@ void pourIntoTarget(std::string drink) {
 }
 
 void replaceDrink(std::string drink, geometry_msgs::Point end_loc) {
+    const static double scale = 0.97;
+
     bar_bot::Mobility mobility;
     mobility.request.disable_collisions = false;
     mobility.request.pour_angle         = 0;
@@ -353,8 +364,8 @@ void replaceDrink(std::string drink, geometry_msgs::Point end_loc) {
     mobility.request.move_time          = 1.35; // Seconds
     mobility.request.disable_collisions = true;
 
-    mobility.request.target_loc.x *= .95;
-    mobility.request.target_loc.y *= .95;
+    mobility.request.target_loc.x *= scale;
+    mobility.request.target_loc.y *= scale;
     mobility.request.target_loc.z = 0.05;
     moveWithFailureChecking(mobility);
 
@@ -366,8 +377,8 @@ void replaceDrink(std::string drink, geometry_msgs::Point end_loc) {
     mobility.request.move_time          = 1.5; // Seconds
     mobility.request.disable_collisions = true;
 
-    mobility.request.target_loc.x *= .95;
-    mobility.request.target_loc.y *= .95;
+    mobility.request.target_loc.x *= scale;
+    mobility.request.target_loc.y *= scale;
     mobility.request.target_loc.z = 0.05;
     moveWithFailureChecking(mobility);
 
@@ -387,8 +398,11 @@ void replaceDrink(std::string drink, geometry_msgs::Point end_loc) {
 
 void pourDrinkIntoCup(std::string drink) {
     auto loc = retrieveDrink(drink);
+    goHome(true);
     pourIntoTarget(CUP);
+    goHome(true);
     replaceDrink(drink, loc);
+    goHome();
 }
 
 // Sequence to pour a mixed drink
@@ -418,18 +432,19 @@ static bool moveWithFailureChecking(bar_bot::Mobility mobility) {
     }
 }
 
-static void goHome() {
+// tODO: goHome for cup and for bottle
+void goHome(bool close_gripper) {
     bar_bot::Mobility temp_mobility;
     temp_mobility.request.disable_collisions = false;
     temp_mobility.request.pour_angle         = 0;
     temp_mobility.request.is_blocking        = true;
     temp_mobility.request.use_trajectory     = true;
-    temp_mobility.request.close_gripper      = false;
+    temp_mobility.request.close_gripper      = close_gripper;
     temp_mobility.request.move_time          = 4; // Seconds
 
-    temp_mobility.request.target_loc.x = .2;
-    temp_mobility.request.target_loc.y = .3;
-    temp_mobility.request.target_loc.z = .25;
+    temp_mobility.request.target_loc.x = .1;
+    temp_mobility.request.target_loc.y = .35;
+    temp_mobility.request.target_loc.z = .35;
 
     ros::spinOnce();
     while (true) {
@@ -500,12 +515,12 @@ int main(int argc, char **argv) {
     backAndForth();
     // trackCups();
     // pourBeer();
-    // pourDrinkIntoCup(SPRITE);
-    // pourDrinkIntoCup(RUM);
-    // pourDrinkIntoCup(COKE);
+    pourDrinkIntoCup(SPRITE);
+    pourDrinkIntoCup(RUM);
+    pourDrinkIntoCup(COKE);
     // // trackCups();
 
-    // goHome();
+    goHome();
 
     while(ros::ok()) {
         ros::spinOnce();
