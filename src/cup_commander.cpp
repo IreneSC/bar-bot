@@ -38,28 +38,28 @@ static const std::string SPRITE("sprite");
 static const std::string VODKA("vodka");
 static const std::string RUM("rum");
 static const std::string OJ("orange juice");
-static const std::string TECHY("tequila");
-static const std::string GRENNY("grenadine");
+static const std::string TEQUILA("tequila");
+static const std::string GRENADINE("grenadine");
 static const std::string SALTYY("salt");
 
 
 static std::unordered_map<std::string, geometry_msgs::Point> det_positions;
 // mixed drink definitions
-static const std::vector<std::string> MARGARITA{SALTYY, TECHY, OJ};
+static const std::vector<std::string> MARGARITA{SALTYY, TEQUILA, OJ};
 static const std::vector<std::string> SCREWDRIVER{VODKA, OJ};
-static const std::vector<std::string> TECHY_SUN{TECHY, GRENNY, OJ, SPRITE};
-static const std::vector<std::string> SUNRISE{GRENNY, OJ, SPRITE};
-static const std::vector<std::string> VOD_SPRITE{SPRITE, VODKA};
-static const std::vector<std::string> TEQ_SPRITE{SPRITE, TECHY};
-static const std::vector<std::string> SURELY{SPRITE, GRENNY};
-static const std::vector<std::string> ZOO{COKE, SPRITE, VODKA, RUM, OJ, TECHY, GRENNY};
+static const std::vector<std::string> TEQUILA_SUNRISE{TEQUILA, GRENADINE, OJ, SPRITE};
+static const std::vector<std::string> SUNRISE{GRENADINE, OJ, SPRITE};
+static const std::vector<std::string> VODKA_SPRITE{SPRITE, VODKA};
+static const std::vector<std::string> TEQUILA_SPRITE{SPRITE, TEQUILA};
+static const std::vector<std::string> SURELY{SPRITE, GRENADINE};
+static const std::vector<std::string> ZOO{COKE, SPRITE, VODKA, RUM, OJ, TEQUILA, GRENADINE};
 static std::unordered_map<std::string, std::vector<std::string>> det_ingredients {
     {"margarita", MARGARITA},
     {"screwdriver", SCREWDRIVER},
-    {"tequila sunrise", TECHY_SUN},
+    {"tequila sunrise", TEQUILA_SUNRISE},
     {"sunrise", SUNRISE},
-    {"vodka sprite", VOD_SPRITE},
-    {"tequila sprite", TEQ_SPRITE},
+    {"vodka sprite", VODKA_SPRITE},
+    {"tequila sprite", TEQUILA_SPRITE},
     {"shirley temple", SURELY},
     {"zoo", ZOO}
 };
@@ -86,6 +86,10 @@ static void replaceDrink(std::string drink, geometry_msgs::Point end_loc);
 static void pourMixedDrink();
 static void processDrinkRequest(const std_msgs::String& drinkType);
 static std::vector<std::string> drinkQueue;
+
+static inline std::string getHomeName(std::string name) {
+    return name + " Home";
+}
 
 // Constants for looking for a cup
 // static const float scanning_z = .20;//m
