@@ -6,18 +6,23 @@
 #include "std_msgs/Bool.h"
 #include "bar_bot/Mobility.h"
 #include "bar_bot/Detections.h"
+#include "std_msgs/String.h"
 #include <unordered_map>
+#include <vector>
 
 // Topics
 static std::string detection_topic;
 static std::string target_position_topic;
 static std::string target_gripper_state_topic;
 static std::string current_pose_topic;
+static std::string drink_type_topic;
 
 // Pub/sub/clients
 static ros::ServiceClient mobility_client;
 static ros::Subscriber detection_subscriber;
 static ros::Subscriber current_pose_subscriber;
+static ros::Subscriber drink_subscriber;
+
 
 // Things gotten from topics
 // static geometry_msgs::PoseArray cup_pose_array;
@@ -33,6 +38,13 @@ static const std::string SPRITE("sprite");
 static const std::string VODKA("vodka?");
 static const std::string RUM("rum");
 static std::unordered_map<std::string, geometry_msgs::Point> det_positions;
+// mixed drink definitions
+static const std::vector<std::string> MARGARITA{SPRITE, COKE};
+static const std::vector<std::string> SCREWDRIVER{RUM, VODKA};
+static std::unordered_map<std::string, std::vector<std::string>> det_ingredients {
+    {"margarita", MARGARITA},
+    {"screwdriver", SCREWDRIVER}
+};
 
 // Function definitions
 static bool moveWithFailureChecking(bar_bot::Mobility mobility);
@@ -47,6 +59,7 @@ static void replaceDrink(std::string drink, geometry_msgs::Point end_loc);
 static void pourDrinkIntoCup(std::string drink);
 static void pourIntoTarget(std::string drink);
 static geometry_msgs::Point retrieveDrink(std::string drink);
+static std::vector<std::string> drinkQueue;
 
 // Constants for looking for a cup
 // static const float scanning_z = .20;//m
@@ -82,6 +95,11 @@ void processArmPose(const geometry_msgs::PoseStamped& arm_pose) {
     last_arm_pos.point = arm_pose.pose.position;
 }
 
+void processDrinkRequest(const std_msgs::String& drinkType) {
+    std::vector<std::string> mixedDrink = det_ingredients[drinkType.data];
+    std::copy(mixedDrink.begin(), mixedDrink.end(), drinkQueue.end());
+}
+
 static double hypot(double x, double y, double z) {
     return sqrt(x*x + y*y + z*z);
 }
@@ -108,6 +126,27 @@ static double distance(const geometry_msgs::Point& p1, const geometry_msgs::Poin
 //     }
 //     return best_pos;
 // }
+
+// Chooses a drink from the queue
+std::string popDrink() {
+    std::string drink = drinkQueue.front();
+    drinkQueue.erase(drinkQueue.begin());
+    return drink;
+}
+
+// Sequence to pour a mixed drink
+void pourMixedDrink()  {
+    // stall until drink request arrives
+    while (drinkQueue.size() == 0) {
+        ROS_INFO("Waiting for drink request");
+    } 
+
+    std::string drink;
+    while (drinkQueue.size() != 0) {
+        drink = popDrink();
+        pourDrinkIntoCup(drink);
+    }
+}
 
 // Returns where it picked it up
 geometry_msgs::Point retrieveDrink(std::string drink) {
@@ -429,6 +468,8 @@ int main(int argc, char **argv) {
         &processDetections);
     current_pose_subscriber = nh.subscribe(current_pose_topic, 10,
         &processArmPose);
+    drink_subscriber = nh.subscribe(drink_type_topic, 10,
+        &processDrinkRequest);
 
     goHome();
 
