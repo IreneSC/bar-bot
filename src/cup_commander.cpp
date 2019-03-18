@@ -49,7 +49,7 @@ static const std::vector<std::string> TEQUILA_SUNRISE{TEQUILA, GRENADINE, OJ, SP
 static const std::vector<std::string> SUNRISE{GRENADINE, OJ, SPRITE};
 static const std::vector<std::string> VODKA_SPRITE{SPRITE, VODKA};
 static const std::vector<std::string> TEQUILA_SPRITE{SPRITE, TEQUILA};
-static const std::vector<std::string> SURELY{SPRITE, GRENADINE};
+static const std::vector<std::string> SHIRLEY_TEMPLE{SPRITE, GRENADINE};
 static const std::vector<std::string> ZOO{SPRITE, VODKA, OJ, TEQUILA, GRENADINE};
 static std::unordered_map<std::string, std::vector<std::string>> det_ingredients {
     {"margarita", MARGARITA},
@@ -58,7 +58,7 @@ static std::unordered_map<std::string, std::vector<std::string>> det_ingredients
     {"sunrise", SUNRISE},
     {"vodka sprite", VODKA_SPRITE},
     {"tequilasprite", TEQUILA_SPRITE},
-    {"shirleytemple", SURELY},
+    {"shirleytemple", SHIRLEY_TEMPLE},
     {"zoo", ZOO}
 };
 

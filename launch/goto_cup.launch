@@ -9,7 +9,7 @@
 
     <!-- Camera -->
     <!-- <include file="$(find realsense2_camera)/launch/rs_camera.launch"/> -->
-    <node name ="detector_node" pkg="bar_bot" type="detector_node.py" output="screen" required="true"/>
+    <!-- <node name ="detector_node" pkg="bar_bot" type="detector_node.py" output="screen" required="true"/> -->
 
     <!-- Hebi interaction/kinematics -->
 
