@@ -1,7 +1,3 @@
-#include <ArduinoTcpHardware.h>
-#include <ArduinoHardware.h>
-#include <ros.h>
-
 /*
  * BARBOT
  * Button Interface
@@ -34,7 +30,10 @@ long time[nb]           = {0, 0, 0, 0};             // the last time the output 
 long debounce           = 200;                      // debounce time, increase if buggy
 bool publish            = false;                     // only publish when somthing has changed
 
-const char MARGARITA[] = "margarita";
+const char MARGARITA[]      = "margarita";
+const char ZOO[]            = "zoo";
+const char TEQUILASUNRISE[] = "tequilasunrise";
+const char SCREWDRIVER[]    = "screwdriver";
 
 // initialize ROS stuff
 ros::NodeHandle nh;
@@ -44,7 +43,7 @@ ros::Publisher buttons("drink_type_topic", &str_msg);
 
 
 void setup() {
-  Serial.begin(9600);
+  //Serial.begin(9600);
 
   // set all buttons to input
   for (int i = 0; i < nb; i++) {
@@ -82,28 +81,31 @@ void loop() {
 
   // if a button was toggled, output is HIGH, go make the drink
   if (out_state[0] == HIGH) {
-    drink[0] = "margarita";
+    str_msg.data = MARGARITA;
+    //Serial.println(MARGARITA);
   }
 
   if (out_state[1] == HIGH) {
-    drink[3] = "zoo";
+    str_msg.data = ZOO;
+    //Serial.println(ZOO);
   }
 
   if (out_state[2] == HIGH) {
-    drink[10] = "screwdriver";
+    str_msg.data = SCREWDRIVER;
+    //Serial.println(SCREWDRIVER);
   }
 
   if (out_state[3] == HIGH) {
-    drink[15] = "tequila sunrise";
+    str_msg.data = TEQUILASUNRISE;
+    //Serial.println(TEQUILASUNRISE);
   }
   
   // for debugging
-  delay(1000);
-  testPrint();
+  //delay(1000);
+  //testPrint();
 
   if (publish == true) {
     // publish the mixed drink we want to make
-    str_msg.data = drink;
     buttons.publish(&str_msg);
   }
 
