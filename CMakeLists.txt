@@ -9,6 +9,8 @@ add_compile_options(-std=c++11 -g -O0)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED)
 
+set(OpenCV_DIR /usr/share/OpenCV)
+
 ## System dependencies are found with CMake's conventions
 find_package(catkin REQUIRED COMPONENTS
   hebiros
